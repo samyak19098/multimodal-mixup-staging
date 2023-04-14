@@ -158,14 +158,14 @@ def createModelV(emd1, emd2, heads, dimFF, dimH, drop, maxlen, maxSpeaker):
   model = keras.Model(inputs=[text,audio,pos,speak], outputs=outputs)
   return model
 
-def createModelC(emd1, emd2, heads, dimFF, dimH, drop, maxlen, maxSpeaker):
+def get_encoder(emd1, emd2, heads, dimFF, dimH, drop, maxlen, maxSpeaker):
   embed_dim1 = emd1   # Embedding size for Text 
   embed_dim2 = emd2   # Embedding size for Audio
   num_heads = heads   # Number of attention heads
   ff_dim = dimFF      # Hidden layer size in feed forward network inside transformer
   hidden_dim = dimH   # Hidden layer Dimension
   dropout = drop      # Dropout
-  
+
   text = Input(shape=(maxlen,embed_dim1))
   audio = Input(shape=(maxlen,embed_dim2))
   pos = Input(shape=(maxlen,embed_dim2))
@@ -186,8 +186,35 @@ def createModelC(emd1, emd2, heads, dimFF, dimH, drop, maxlen, maxSpeaker):
 
   fused = attendedText*attentionText2 + attendedAudio*attentionAudio2 + pos
   fusedSpeaker = Concatenate(axis=2)([fused,speak])
+
+  return keras.Model(inputs=[text, audio, pos, speak], outputs=fusedSpeaker)
+
   
-  # Insert mixup
+
+def createModelC(emd1, emd2, heads, dimFF, dimH, drop, maxlen, maxSpeaker):
+  embed_dim1 = emd1   # Embedding size for Text 
+  embed_dim2 = emd2   # Embedding size for Audio
+  num_heads = heads   # Number of attention heads
+  ff_dim = dimFF      # Hidden layer size in feed forward network inside transformer
+  hidden_dim = dimH   # Hidden layer Dimension
+  dropout = drop      # Dropout
+  
+  text_1 = Input(shape=(maxlen,embed_dim1))
+  audio_1 = Input(shape=(maxlen,embed_dim2))
+  pos_1 = Input(shape=(maxlen,embed_dim2))
+  speak_1 = Input(shape=(maxLen,maxSpeaker+1))
+
+  text_2 = Input(shape=(maxlen,embed_dim1))
+  audio_2 = Input(shape=(maxlen,embed_dim2))
+  pos_2 = Input(shape=(maxlen,embed_dim2))
+  speak_2 = Input(shape=(maxLen,maxSpeaker+1))
+
+  mixing_ratio = Input(shape=(1,))
+
+  encoder = get_encoder(emd1, emd2, heads, dimFF, dimH, drop, maxlen, maxSpeaker)
+  fusedSpeaker_1 = encoder([text_1, audio_1, pos_1, speak_1])
+  fusedSpeaker_2 = encoder([text_2, audio_2, pos_2, speak_2])
+  fusedSpeaker = mixing_ratio * fusedSpeaker_1 + (1 - mixing_ratio) * fusedSpeaker_2
   
 
   transformer_block = TransformerBlock(embed_dim2+maxSpeaker+1, num_heads, ff_dim, 0)
@@ -197,7 +224,7 @@ def createModelC(emd1, emd2, heads, dimFF, dimH, drop, maxlen, maxSpeaker):
   x = layers.Dropout(dropout)(x)
   outputs = layers.Dense(1, activation="sigmoid")(x)
 
-  model = keras.Model(inputs=[text,audio,pos,speak], outputs=outputs)
+  model = keras.Model(inputs=[text_1,audio_1,pos_1,speak_1, text_2, audio_2, pos_2, speak_2], outputs=outputs)
   return model
 
 """# M3A Data Loading and Processing"""
@@ -352,29 +379,29 @@ YT15 = YVals['vFuture15']
 
 Ys = [YT3,YT7,YT15]
 YPrint = ["Tau 3","Tau 7","Tau 15"]
-# print("------------------------------ Starting training -----------------------------------")
-# for i in range(3):
-#   print(f"At i = {i}")
-#   YTrain = Ys[i][trainIndex]
-#   YTest = Ys[i][testIndex]
+print("------------------------------ Starting training -----------------------------------")
+for i in range(3):
+  print(f"At i = {i}")
+  YTrain = Ys[i][trainIndex]
+  YTest = Ys[i][testIndex]
   
-#   modelN = "ModelV "+YPrint[i]+".h5"
+  modelN = "ModelV "+YPrint[i]+".h5"
 
-#   mc = tf.keras.callbacks.ModelCheckpoint(modelN, monitor='val_loss', verbose=0, save_best_only=True)
-#   model = createModelV(768, 62, 3, volatility_feedforward_size, volatility_hidden_dim, volatility_dropout, maxLen,maxSpeaker)
-#   model.compile(loss='mean_squared_error', optimizer=Adam(lr = learning_rate))
-#   out = model.fit([X_text_Train,X_audio_Train,X_pos_Train,X_speak_Train], YTrain, batch_size=batch_size, epochs=500, validation_data=([X_text_Test,X_audio_Test,X_pos_Test,X_speak_Test],YTest), verbose=1, callbacks=[mc])
-#   depen = {'MultiHeadSelfAttention': MultiHeadSelfAttention,'TransformerBlock': TransformerBlock} 
-#   model = load_model(modelN, custom_objects=depen)
+  mc = tf.keras.callbacks.ModelCheckpoint(modelN, monitor='val_loss', verbose=0, save_best_only=True)
+  model = createModelV(768, 62, 3, volatility_feedforward_size, volatility_hidden_dim, volatility_dropout, maxLen,maxSpeaker)
+  model.compile(loss='mean_squared_error', optimizer=Adam(lr = learning_rate))
+  out = model.fit([X_text_Train,X_audio_Train,X_pos_Train,X_speak_Train], YTrain, batch_size=batch_size, epochs=500, validation_data=([X_text_Test,X_audio_Test,X_pos_Test,X_speak_Test],YTest), verbose=1, callbacks=[mc])
+  depen = {'MultiHeadSelfAttention': MultiHeadSelfAttention,'TransformerBlock': TransformerBlock} 
+  model = load_model(modelN, custom_objects=depen)
   
-#   predTest = model.predict([X_text_Train,X_audio_Train,X_pos_Train,X_speak_Train])
-#   r = mean_squared_error(YTrain,predTest)
-#   print('MSE for Training Set for ',YPrint[i],': ',r)
+  predTest = model.predict([X_text_Train,X_audio_Train,X_pos_Train,X_speak_Train])
+  r = mean_squared_error(YTrain,predTest)
+  print('MSE for Training Set for ',YPrint[i],': ',r)
   
-#   predTest = model.predict([X_text_Test,X_audio_Test,X_pos_Test,X_speak_Test])
-#   r = mean_squared_error(YTest,predTest)
-#   print('MSE for Testing Set for ',YPrint[i],': ',r)
-#   print()
+  predTest = model.predict([X_text_Test,X_audio_Test,X_pos_Test,X_speak_Test])
+  r = mean_squared_error(YTest,predTest)
+  print('MSE for Testing Set for ',YPrint[i],': ',r)
+  print()
 
 YVals = pd.read_csv("Y_Movement.csv")
 YT3 = YVals['YT3']
@@ -390,13 +417,27 @@ for i in range(3):
   YTrain = Ys[i][trainIndex]
   YTest = Ys[i][testIndex]
 
-  print(f"shapes: Y_train = {YTrain.shape}, YTest = {YTest.shape}")
   modelN = "ModelC "+YPrint[i]+".h5"
 
   mc = tf.keras.callbacks.ModelCheckpoint(modelN, monitor='val_accuracy', verbose=0, save_best_only=True)
   model = createModelC(768, 62, 3, movement_feedforward_size, movement_hidden_dim, movement_dropout, maxLen,maxSpeaker)
   model.compile(loss='binary_crossentropy', optimizer=Adam(lr = learning_rate), metrics=['accuracy'])
-  out = model.fit([X_text_Train,X_audio_Train,X_pos_Train,X_speak_Train], YTrain, batch_size=batch_size, epochs=500, validation_data=([X_text_Test,X_audio_Test,X_pos_Test,X_speak_Test],YTest), verbose=1, callbacks=[mc])
+
+  # x1, x2
+  # x_mix = mix(x1, x2)
+  # y_mix = mix(y1, y2)
+  num_samples = X_text_Train.shape[0]
+  perm = np.random.permutation(num_samples)
+  X_text_Train_2 = X_text_Train.iloc[perm].reset_index()
+  X_audio_Train_2 = X_audio_Train.iloc[perm].reset_index()
+  X_pos_Train_2 = X_pos_Train.iloc[perm].reset_index()
+  X_speak_Train_2 = X_speak_Train.iloc[perm].reset_index()
+  YTrain_2 = YTrain.iloc[perm].reset_index()
+  
+  mixing_ratio = np.array([[np.random.beta(0.75, 0.75)] for i in range(num_samples)])
+  Y_mix = YTrain * mixing_ratio.squeeze() + YTrain_2 * (1 - mixing_ratio.squeeze()) 
+  
+  out = model.fit([X_text_Train,X_audio_Train,X_pos_Train,X_speak_Train, X_text_Train_2, X_audio_Train_2, X_pos_Train_2, X_speak_Train_2], Y_mix, batch_size=batch_size, epochs=500, validation_data=([X_text_Test,X_audio_Test,X_pos_Test,X_speak_Test],YTest), verbose=1, callbacks=[mc])
   depen = {'MultiHeadSelfAttention': MultiHeadSelfAttention,'TransformerBlock': TransformerBlock} 
   model = load_model(modelN, custom_objects=depen)
   
