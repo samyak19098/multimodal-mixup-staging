@@ -442,17 +442,36 @@ for i in range(3):
   print(f"mr = {mixing_ratio.shape}, ytrain = {YTrain.to_numpy().shape}, ytrain2 = {YTrain_2.to_numpy().shape}")
   Y_mix = YTrain.to_numpy() * mixing_ratio.squeeze() + YTrain_2.to_numpy() * (1 - mixing_ratio.squeeze()) 
   
-  out = model.fit([X_text_Train,X_audio_Train,X_pos_Train,X_speak_Train, X_text_Train_2, X_audio_Train_2, X_pos_Train_2, X_speak_Train_2, mixing_ratio], Y_mix, batch_size=batch_size, epochs=500, validation_data=([X_text_Test,X_audio_Test,X_pos_Test,X_speak_Test],YTest), verbose=1, callbacks=[mc])
+  num_samples_test = X_text_Test.shape[0]
+  perm_test = np.random.permutation(num_samples_test)
+  X_text_Test_2 = X_text_Test[perm_test]
+  X_audio_Test_2 = X_audio_Test[perm_test]
+  X_pos_Test_2 = X_pos_Test[perm_test]
+  X_speak_Test_2 = X_speak_Test[perm_test]
+  YTest_2 = YTest.iloc[perm_test]
+  mixing_ratio_test = np.array([[1] for i in range(num_samples_test)])
+  mixing_ratio_test = mixing_ratio_test.reshape((num_samples_test, 1, 1))
+  print(f"mr = {mixing_ratio_test.shape}, ytrain = {YTest.to_numpy().shape}, ytrain2 = {YTest_2.to_numpy().shape}")
+  Y_mix_Test = YTest.to_numpy() * mixing_ratio_test.squeeze() + YTest_2.to_numpy() * (1 - mixing_ratio_test.squeeze())
+  
+  
+  
+  out = model.fit([X_text_Train,X_audio_Train,X_pos_Train,X_speak_Train, X_text_Train_2, X_audio_Train_2, X_pos_Train_2, X_speak_Train_2, mixing_ratio], Y_mix, batch_size=batch_size, epochs=500, validation_data=([X_text_Test,X_audio_Test,X_pos_Test,X_speak_Test, X_text_Test_2,X_audio_Test_2,X_pos_Test_2,X_speak_Test_2, mixing_ratio_test],Y_mix_Test), verbose=1, callbacks=[mc])
   depen = {'MultiHeadSelfAttention': MultiHeadSelfAttention,'TransformerBlock': TransformerBlock} 
   model = load_model(modelN, custom_objects=depen)
   
-  predTest = model.predict([X_text_Train,X_audio_Train,X_pos_Train,X_speak_Train]).round()
+  mixing_ratio_ones_train = np.array([[np.random.beta(0.75, 0.75)] for i in range(num_samples)])
+  mixing_ratio_ones_train = mixing_ratio_ones_train.reshape((num_samples, 1, 1))
+  mixing_ratio_ones_test = np.array([[1] for i in range(num_samples_test)])
+  mixing_ratio_ones_test = mixing_ratio_ones_test.reshape((num_samples_test, 1, 1))
+  
+  predTest = model.predict([X_text_Train,X_audio_Train,X_pos_Train,X_speak_Train, X_text_Train, X_audio_Train, X_pos_Train, X_speak_Train, mixing_ratio_ones_train]).round()
   mcc = matthews_corrcoef(YTrain, predTest)
   f1 = f1_score(YTrain,predTest)
   print('F1 for Training Set for ',YPrint[i],': ',f1)
   print('MCC for Training Set for ',YPrint[i],': ',mcc)  
   
-  predTest = model.predict([X_text_Test,X_audio_Test,X_pos_Test,X_speak_Test]).round()
+  predTest = model.predict([X_text_Test,X_audio_Test,X_pos_Test,X_speak_Test, X_text_Test,X_audio_Test,X_pos_Test,X_speak_Test, mixing_ratio_ones_test]).round()
   mcc = matthews_corrcoef(YTest, predTest)
   f1 = f1_score(YTest,predTest)
   print('F1 for Testing Set for ',YPrint[i],': ',f1)
