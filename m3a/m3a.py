@@ -254,6 +254,7 @@ for i in tqdm(range(len(files))):
     date += d[1] 
   else:
     date += '0'+d[1]
+  f = f.replace('&', '_')
   folder = path_to_files + f + '_' + date+'/'
   df = pd.read_csv(folder+"Text.csv")
   speaker = df['Speaker']
@@ -290,6 +291,7 @@ for i in tqdm(range(len(files))):
     date += d[1] 
   else:
     date += '0'+d[1]
+  f = f.replace('&', '_')
   folder = path_to_files + f + '_' + date+'/'
   df = pd.read_csv(folder+"Audio.csv")
   df = df.drop([df.columns[0]],axis=1)
