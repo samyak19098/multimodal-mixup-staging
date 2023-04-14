@@ -220,6 +220,7 @@ for i in tqdm(range(len(files))):
     date += d[1] 
   else:
     date += '0'+d[1]
+  f = f.replace('&', '_')
   folder = path_to_files + f + '_' + date+'/'
   df = pd.read_csv(folder+"Text.csv")
   df = df.drop([df.columns[0], df.columns[1]],axis=1)
