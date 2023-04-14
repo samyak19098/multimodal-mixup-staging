@@ -435,9 +435,10 @@ for i in range(3):
   X_audio_Train_2 = X_audio_Train[perm]
   X_pos_Train_2 = X_pos_Train[perm]
   X_speak_Train_2 = X_speak_Train[perm]
-  YTrain_2 = YTrain.iloc[perm].reset_index()
+  YTrain_2 = YTrain.iloc[perm]
   
   mixing_ratio = np.array([[np.random.beta(0.75, 0.75)] for i in range(num_samples)])
+  print(f"mr = {mixing_ratio.shape}, ytrain = {YTrain.to_numpy().shape}, ytrain2 = {YTrain_2.to_numpy().shape}")
   Y_mix = YTrain.to_numpy() * mixing_ratio.squeeze() + YTrain_2.to_numpy() * (1 - mixing_ratio.squeeze()) 
   
   out = model.fit([X_text_Train,X_audio_Train,X_pos_Train,X_speak_Train, X_text_Train_2, X_audio_Train_2, X_pos_Train_2, X_speak_Train_2, mixing_ratio], Y_mix, batch_size=batch_size, epochs=500, validation_data=([X_text_Test,X_audio_Test,X_pos_Test,X_speak_Test],YTest), verbose=1, callbacks=[mc])
