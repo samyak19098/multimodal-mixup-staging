@@ -209,7 +209,7 @@ def createModelC(emd1, emd2, heads, dimFF, dimH, drop, maxlen, maxSpeaker):
   pos_2 = Input(shape=(maxlen,embed_dim2))
   speak_2 = Input(shape=(maxLen,maxSpeaker+1))
 
-  mixing_ratio = Input(shape=(1,))
+  mixing_ratio = Input(shape=(1,1))
 
   encoder = get_encoder(emd1, emd2, heads, dimFF, dimH, drop, maxlen, maxSpeaker)
   fusedSpeaker_1 = encoder([text_1, audio_1, pos_1, speak_1])
@@ -438,6 +438,7 @@ for i in range(3):
   YTrain_2 = YTrain.iloc[perm]
   
   mixing_ratio = np.array([[np.random.beta(0.75, 0.75)] for i in range(num_samples)])
+  mixing_ratio = mixing_ratio.reshape((num_samples, 1, 1))
   print(f"mr = {mixing_ratio.shape}, ytrain = {YTrain.to_numpy().shape}, ytrain2 = {YTrain_2.to_numpy().shape}")
   Y_mix = YTrain.to_numpy() * mixing_ratio.squeeze() + YTrain_2.to_numpy() * (1 - mixing_ratio.squeeze()) 
   
