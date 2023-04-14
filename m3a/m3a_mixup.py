@@ -435,7 +435,7 @@ for i in range(3):
   X_audio_Train_2 = X_audio_Train[perm]
   X_pos_Train_2 = X_pos_Train[perm]
   X_speak_Train_2 = X_speak_Train[perm]
-  YTrain_2 = YTrain[perm]
+  YTrain_2 = YTrain.iloc[perm].reset_index()
   
   mixing_ratio = np.array([[np.random.beta(0.75, 0.75)] for i in range(num_samples)])
   Y_mix = YTrain * mixing_ratio.squeeze() + YTrain_2 * (1 - mixing_ratio.squeeze()) 
