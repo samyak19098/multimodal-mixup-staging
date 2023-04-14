@@ -428,11 +428,11 @@ for i in range(3):
   # y_mix = mix(y1, y2)
   num_samples = X_text_Train.shape[0]
   perm = np.random.permutation(num_samples)
-  X_text_Train_2 = X_text_Train.iloc[perm].reset_index()
-  X_audio_Train_2 = X_audio_Train.iloc[perm].reset_index()
-  X_pos_Train_2 = X_pos_Train.iloc[perm].reset_index()
-  X_speak_Train_2 = X_speak_Train.iloc[perm].reset_index()
-  YTrain_2 = YTrain.iloc[perm].reset_index()
+  X_text_Train_2 = X_text_Train[perm]
+  X_audio_Train_2 = X_audio_Train[perm]
+  X_pos_Train_2 = X_pos_Train[perm]
+  X_speak_Train_2 = X_speak_Train[perm]
+  YTrain_2 = YTrain[perm]
   
   mixing_ratio = np.array([[np.random.beta(0.75, 0.75)] for i in range(num_samples)])
   Y_mix = YTrain * mixing_ratio.squeeze() + YTrain_2 * (1 - mixing_ratio.squeeze()) 
