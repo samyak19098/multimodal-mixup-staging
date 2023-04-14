@@ -349,8 +349,9 @@ YT15 = YVals['vFuture15']
 
 Ys = [YT3,YT7,YT15]
 YPrint = ["Tau 3","Tau 7","Tau 15"]
-
+print("------------------------------ Starting training -----------------------------------")
 for i in range(3):
+  print(f"At i = {i}")
   YTrain = Ys[i][trainIndex]
   YTest = Ys[i][testIndex]
   
@@ -380,7 +381,9 @@ YT15 = YVals['YT15']
 Ys = [YT3,YT7,YT15]
 YPrint = ["Tau 3","Tau 7","Tau 15"]
 
+print("------------------------------ Starting training 2-----------------------------------")
 for i in range(3):
+  print(f"At i = {i}")
   YTrain = Ys[i][trainIndex]
   YTest = Ys[i][testIndex]
 
