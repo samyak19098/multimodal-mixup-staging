@@ -423,6 +423,9 @@ for i in range(3):
   model = createModelC(768, 62, 3, movement_feedforward_size, movement_hidden_dim, movement_dropout, maxLen,maxSpeaker)
   model.compile(loss='binary_crossentropy', optimizer=Adam(lr = learning_rate), metrics=['accuracy'])
 
+
+  print(f"Shapes: X_text_train = {X_audio_Train.shape}, X_audio_Train = {X_audio_Train.shape}, X_pos_Train = {X_pos_Train.shape}, X_speak_Train = {X_speak_Train.shape}, Y_train = {YTrain.shape}")
+
   # x1, x2
   # x_mix = mix(x1, x2)
   # y_mix = mix(y1, y2)
