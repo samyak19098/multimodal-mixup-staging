@@ -379,29 +379,29 @@ YT15 = YVals['vFuture15']
 
 Ys = [YT3,YT7,YT15]
 YPrint = ["Tau 3","Tau 7","Tau 15"]
-print("------------------------------ Starting training -----------------------------------")
-for i in range(3):
-  print(f"At i = {i}")
-  YTrain = Ys[i][trainIndex]
-  YTest = Ys[i][testIndex]
+# print("------------------------------ Starting training -----------------------------------")
+# for i in range(3):
+#   print(f"At i = {i}")
+#   YTrain = Ys[i][trainIndex]
+#   YTest = Ys[i][testIndex]
   
-  modelN = "ModelV "+YPrint[i]+".h5"
+#   modelN = "ModelV "+YPrint[i]+".h5"
 
-  mc = tf.keras.callbacks.ModelCheckpoint(modelN, monitor='val_loss', verbose=0, save_best_only=True)
-  model = createModelV(768, 62, 3, volatility_feedforward_size, volatility_hidden_dim, volatility_dropout, maxLen,maxSpeaker)
-  model.compile(loss='mean_squared_error', optimizer=Adam(lr = learning_rate))
-  out = model.fit([X_text_Train,X_audio_Train,X_pos_Train,X_speak_Train], YTrain, batch_size=batch_size, epochs=500, validation_data=([X_text_Test,X_audio_Test,X_pos_Test,X_speak_Test],YTest), verbose=1, callbacks=[mc])
-  depen = {'MultiHeadSelfAttention': MultiHeadSelfAttention,'TransformerBlock': TransformerBlock} 
-  model = load_model(modelN, custom_objects=depen)
+#   mc = tf.keras.callbacks.ModelCheckpoint(modelN, monitor='val_loss', verbose=0, save_best_only=True)
+#   model = createModelV(768, 62, 3, volatility_feedforward_size, volatility_hidden_dim, volatility_dropout, maxLen,maxSpeaker)
+#   model.compile(loss='mean_squared_error', optimizer=Adam(lr = learning_rate))
+#   out = model.fit([X_text_Train,X_audio_Train,X_pos_Train,X_speak_Train], YTrain, batch_size=batch_size, epochs=500, validation_data=([X_text_Test,X_audio_Test,X_pos_Test,X_speak_Test],YTest), verbose=1, callbacks=[mc])
+#   depen = {'MultiHeadSelfAttention': MultiHeadSelfAttention,'TransformerBlock': TransformerBlock} 
+#   model = load_model(modelN, custom_objects=depen)
   
-  predTest = model.predict([X_text_Train,X_audio_Train,X_pos_Train,X_speak_Train])
-  r = mean_squared_error(YTrain,predTest)
-  print('MSE for Training Set for ',YPrint[i],': ',r)
+#   predTest = model.predict([X_text_Train,X_audio_Train,X_pos_Train,X_speak_Train])
+#   r = mean_squared_error(YTrain,predTest)
+#   print('MSE for Training Set for ',YPrint[i],': ',r)
   
-  predTest = model.predict([X_text_Test,X_audio_Test,X_pos_Test,X_speak_Test])
-  r = mean_squared_error(YTest,predTest)
-  print('MSE for Testing Set for ',YPrint[i],': ',r)
-  print()
+#   predTest = model.predict([X_text_Test,X_audio_Test,X_pos_Test,X_speak_Test])
+#   r = mean_squared_error(YTest,predTest)
+#   print('MSE for Testing Set for ',YPrint[i],': ',r)
+#   print()
 
 YVals = pd.read_csv("Y_Movement.csv")
 YT3 = YVals['YT3']
