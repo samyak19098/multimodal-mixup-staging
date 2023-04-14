@@ -224,7 +224,7 @@ def createModelC(emd1, emd2, heads, dimFF, dimH, drop, maxlen, maxSpeaker):
   x = layers.Dropout(dropout)(x)
   outputs = layers.Dense(1, activation="sigmoid")(x)
 
-  model = keras.Model(inputs=[text_1,audio_1,pos_1,speak_1, text_2, audio_2, pos_2, speak_2], outputs=outputs)
+  model = keras.Model(inputs=[text_1,audio_1,pos_1,speak_1, text_2, audio_2, pos_2, speak_2, mixing_ratio], outputs=outputs)
   return model
 
 """# M3A Data Loading and Processing"""
@@ -437,7 +437,7 @@ for i in range(3):
   mixing_ratio = np.array([[np.random.beta(0.75, 0.75)] for i in range(num_samples)])
   Y_mix = YTrain * mixing_ratio.squeeze() + YTrain_2 * (1 - mixing_ratio.squeeze()) 
   
-  out = model.fit([X_text_Train,X_audio_Train,X_pos_Train,X_speak_Train, X_text_Train_2, X_audio_Train_2, X_pos_Train_2, X_speak_Train_2], Y_mix, batch_size=batch_size, epochs=500, validation_data=([X_text_Test,X_audio_Test,X_pos_Test,X_speak_Test],YTest), verbose=1, callbacks=[mc])
+  out = model.fit([X_text_Train,X_audio_Train,X_pos_Train,X_speak_Train, X_text_Train_2, X_audio_Train_2, X_pos_Train_2, X_speak_Train_2, mixing_ratio], Y_mix, batch_size=batch_size, epochs=500, validation_data=([X_text_Test,X_audio_Test,X_pos_Test,X_speak_Test],YTest), verbose=1, callbacks=[mc])
   depen = {'MultiHeadSelfAttention': MultiHeadSelfAttention,'TransformerBlock': TransformerBlock} 
   model = load_model(modelN, custom_objects=depen)
   
