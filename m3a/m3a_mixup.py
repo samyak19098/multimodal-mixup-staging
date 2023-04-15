@@ -16,8 +16,8 @@ import gc
 
 from keras import backend as K
 
-config = tf.ConfigProto( device_count = {'GPU': 1} ) 
-sess = tf.Session(config=config) 
+config = tf.compat.v1.ConfigProto( device_count = {'GPU': 1} ) 
+sess = tf.compat.v1.Session(config=config) 
 keras.backend.set_session(sess)
 
 def recall_m(y_true, y_pred):
