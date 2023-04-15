@@ -437,7 +437,10 @@ for i in range(3):
   X_speak_Train_2 = X_speak_Train[perm]
   YTrain_2 = YTrain.iloc[perm]
   
-  mixing_ratio = np.array([[np.random.beta(0.75, 0.75)] for i in range(num_samples)])
+  mixing_ratio = np.array([np.random.beta(0.75, 0.75) for i in range(num_samples)])
+  one_indices = np.random.choice(len(mixing_ratio), size=int(0.7 * len(mixing_ratio)), replace=False)
+  mixing_ratio[one_indices] = 1
+  
   mixing_ratio = mixing_ratio.reshape((num_samples, 1, 1))
   print(f"mr = {mixing_ratio.shape}, ytrain = {YTrain.to_numpy().shape}, ytrain2 = {YTrain_2.to_numpy().shape}")
   Y_mix = YTrain.to_numpy() * mixing_ratio.squeeze() + YTrain_2.to_numpy() * (1 - mixing_ratio.squeeze()) 
