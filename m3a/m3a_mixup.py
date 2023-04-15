@@ -456,7 +456,7 @@ for i in range(3):
 
   modelN = "ModelC "+YPrint[i]+".h5"
 
-  mc = tf.keras.callbacks.ModelCheckpoint(modelN, monitor='val_accuracy', verbose=0, save_best_only=True)
+  mc = tf.keras.callbacks.ModelCheckpoint(modelN, monitor='val_f1_m', verbose=0, save_best_only=True)
   model = createModelC(768, 62, 3, movement_feedforward_size, movement_hidden_dim, movement_dropout, maxLen,maxSpeaker)
   model.compile(loss='binary_crossentropy', optimizer=Adam(lr = learning_rate), metrics=['accuracy', f1_m, mcc_m])
 
