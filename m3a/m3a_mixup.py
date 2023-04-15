@@ -14,6 +14,43 @@ import math
 import matplotlib.pyplot as plt
 import gc
 
+from keras import backend as K
+
+def recall_m(y_true, y_pred):
+    true_positives = K.sum(K.round(K.clip(y_true * y_pred, 0, 1)))
+    possible_positives = K.sum(K.round(K.clip(y_true, 0, 1)))
+    recall = true_positives / (possible_positives + K.epsilon())
+    return recall
+
+def precision_m(y_true, y_pred):
+    true_positives = K.sum(K.round(K.clip(y_true * y_pred, 0, 1)))
+    predicted_positives = K.sum(K.round(K.clip(y_pred, 0, 1)))
+    precision = true_positives / (predicted_positives + K.epsilon())
+    return precision
+
+def f1_m(y_true, y_pred):
+    precision = precision_m(y_true, y_pred)
+    recall = recall_m(y_true, y_pred)
+    return 2*((precision*recall)/(precision+recall+K.epsilon()))
+
+def matthews_correlation(y_true, y_pred):
+    y_pred_pos = K.round(K.clip(y_pred, 0, 1))
+    y_pred_neg = 1 - y_pred_pos
+
+    y_pos = K.round(K.clip(y_true, 0, 1))
+    y_neg = 1 - y_pos
+
+    tp = K.sum(y_pos * y_pred_pos)
+    tn = K.sum(y_neg * y_pred_neg)
+
+    fp = K.sum(y_neg * y_pred_pos)
+    fn = K.sum(y_pos * y_pred_neg)
+
+    numerator = (tp * tn - fp * fn)
+    denominator = K.sqrt((tp + fp) * (tp + fn) * (tn + fp) * (tn + fn))
+
+    return numerator / (denominator + K.epsilon())
+
 #Hyper Parameters
 batch_size = 64
 learning_rate = 0.001
@@ -421,7 +458,7 @@ for i in range(3):
 
   mc = tf.keras.callbacks.ModelCheckpoint(modelN, monitor='val_accuracy', verbose=0, save_best_only=True)
   model = createModelC(768, 62, 3, movement_feedforward_size, movement_hidden_dim, movement_dropout, maxLen,maxSpeaker)
-  model.compile(loss='binary_crossentropy', optimizer=Adam(lr = learning_rate), metrics=['accuracy'])
+  model.compile(loss='binary_crossentropy', optimizer=Adam(lr = learning_rate), metrics=['accuracy', f1_m, matthews_correlation, precision_m, recall_m])
 
 
   print(f"Shapes: X_text_train = {X_text_Train.shape}, X_audio_Train = {X_audio_Train.shape}, X_pos_Train = {X_pos_Train.shape}, X_speak_Train = {X_speak_Train.shape}, Y_train = {YTrain.shape}")
