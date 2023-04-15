@@ -500,7 +500,7 @@ for i in range(3):
   
   
   
-  out = model.fit([X_text_Train,X_audio_Train,X_pos_Train,X_speak_Train, X_text_Train_2, X_audio_Train_2, X_pos_Train_2, X_speak_Train_2, mixing_ratio], Y_mix, batch_size=batch_size, epochs=2, validation_data=([X_text_Test,X_audio_Test,X_pos_Test,X_speak_Test, X_text_Test_2,X_audio_Test_2,X_pos_Test_2,X_speak_Test_2, mixing_ratio_test],Y_mix_Test), verbose=1, callbacks=[mc])
+  out = model.fit([X_text_Train,X_audio_Train,X_pos_Train,X_speak_Train, X_text_Train_2, X_audio_Train_2, X_pos_Train_2, X_speak_Train_2, mixing_ratio], Y_mix, batch_size=batch_size, epochs=10, validation_data=([X_text_Test,X_audio_Test,X_pos_Test,X_speak_Test, X_text_Test_2,X_audio_Test_2,X_pos_Test_2,X_speak_Test_2, mixing_ratio_test],Y_mix_Test), verbose=1, callbacks=[mc])
   depen = {'MultiHeadSelfAttention': MultiHeadSelfAttention,'TransformerBlock': TransformerBlock, 'f1_m':f1_m} 
   model = load_model(modelN, custom_objects=depen)
   
