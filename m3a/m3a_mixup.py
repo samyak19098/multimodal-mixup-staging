@@ -18,7 +18,7 @@ from keras import backend as K
 
 config = tf.compat.v1.ConfigProto( device_count = {'GPU': 1} ) 
 sess = tf.compat.v1.Session(config=config) 
-keras.backend.set_session(sess)
+tf.compat.v1.keras.backend.set_session(sess)
 
 def recall_m(y_true, y_pred):
     true_positives = K.sum(K.round(K.clip(y_true * y_pred, 0, 1)))
