@@ -53,7 +53,7 @@ def mcc_m(y_true, y_pred):
 
 #Hyper Parameters
 batch_size = 64
-learning_rate = 0.001
+learning_rate = 0.0001
 
 volatility_feedforward_size = 16
 volatility_hidden_dim = 16
@@ -474,7 +474,7 @@ for i in range(3):
   X_speak_Train_2 = X_speak_Train[perm]
   YTrain_2 = YTrain.iloc[perm]
   
-  mixing_ratio = np.array([np.random.beta(0.75, 0.75) for i in range(num_samples)])
+  mixing_ratio = np.array([np.random.beta(0.5, 0.5) for i in range(num_samples)])
   one_indices = np.random.choice(len(mixing_ratio), size=int(0.8 * len(mixing_ratio)), replace=False)
   mixing_ratio[one_indices] = 1
   
