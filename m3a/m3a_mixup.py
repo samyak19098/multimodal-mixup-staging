@@ -225,7 +225,8 @@ def get_encoder(emd1, emd2, heads, dimFF, dimH, drop, maxlen, maxSpeaker):
   attendedText = newtext*attentionText2 
   attendedAudio = audio*attentionAudio2 
 
-  fused = attendedText*attentionText2 + attendedAudio*attentionAudio2 + pos
+  # fused = attendedText*attentionText2 + attendedAudio*attentionAudio2 + pos
+  fused = attendedText + attendedAudio + pos
   fusedSpeaker = Concatenate(axis=2)([fused,speak])
 
   return keras.Model(inputs=[text, audio, pos, speak], outputs=fusedSpeaker)
@@ -460,7 +461,7 @@ for i in range(3):
 
   modelN = "ModelC "+YPrint[i]+".h5"
 
-  mc = tf.keras.callbacks.ModelCheckpoint(modelN, monitor='val_f1_m', verbose=0, save_best_only=True)
+  mc = tf.keras.callbacks.ModelCheckpoint(modelN, monitor='val_accuracy', verbose=0, save_best_only=True)
   model = createModelC(768, 62, 3, movement_feedforward_size, movement_hidden_dim, movement_dropout, maxLen,maxSpeaker)
   model.compile(loss='binary_crossentropy', optimizer=Adam(lr = learning_rate), metrics=['accuracy', f1_m, mcc_m])
 
