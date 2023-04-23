@@ -214,8 +214,8 @@ def get_encoder(emd1, emd2, heads, dimFF, dimH, drop, maxlen, maxSpeaker):
 
   newtext = TimeDistributed(Dense(62))(text)
 
-  attentionText1 = TimeDistributed(Dense(62, activation='softmax'))(newtext)
-  attentionAudio1 = TimeDistributed(Dense(62, activation='softmax'))(audio)
+  # attentionText1 = TimeDistributed(Dense(62, activation='softmax'))(newtext)
+  # attentionAudio1 = TimeDistributed(Dense(62, activation='softmax'))(audio)
   attentionText2 = TimeDistributed(Dense(62, activation='softmax'))(newtext)
   attentionAudio2 = TimeDistributed(Dense(62, activation='softmax'))(audio)
   attentionSum = attentionText2+attentionAudio2
