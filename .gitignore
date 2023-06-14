@@ -1,4 +1,3 @@
 wandb/
-Dataset/
 processed_data/
 *.h5
