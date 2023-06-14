@@ -13,6 +13,7 @@ import math
 # %matplotlib inline
 import matplotlib.pyplot as plt
 import gc
+import argparse
 
 #Hyper Parameters
 batch_size = 64
@@ -202,6 +203,13 @@ def createModelC(emd1, emd2, heads, dimFF, dimH, drop, maxlen, maxSpeaker):
 
 """# M3A Data Loading and Processing"""
 
+
+# parser = argparse.ArgumentParser(description = 'M3A')
+# parser.add_argument("--run_num", type=str, help="Run number", required=True)
+# args = parser.parse_args()
+# print(args)
+
+
 YVals = pd.read_csv("Y_Volatility.csv")
 files = YVals['File Name']
 dates = YVals['Date']
@@ -386,12 +394,13 @@ YPrint = ["Tau 3","Tau 7","Tau 15"]
 
 print("------------------------------ Starting training 2-----------------------------------")
 for i in range(3):
+  i = 2
   print(f"At i = {i}")
   YTrain = Ys[i][trainIndex]
   YTest = Ys[i][testIndex]
 
   print(f"shapes: Y_train = {YTrain.shape}, YTest = {YTest.shape}")
-  modelN = "ModelC "+YPrint[i]+".h5"
+  modelN = f"save-ModelC "+YPrint[i]+".h5"
 
   mc = tf.keras.callbacks.ModelCheckpoint(modelN, monitor='val_accuracy', verbose=0, save_best_only=True)
   model = createModelC(768, 62, 3, movement_feedforward_size, movement_hidden_dim, movement_dropout, maxLen,maxSpeaker)
