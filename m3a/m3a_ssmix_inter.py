@@ -17,9 +17,20 @@ import gc
 import argparse
 import sys
 
+ap = argparse.ArgumentParser()
+ap.add_argument('--tau', type=int, default=0, help='0 for 3, 1 for 7 and 2 for 15')
+ap.add_argument('--threshold', type=float, default=0.7, help='Saliency threshold')
+ap.add_argument('--loss_original_coef', type=float, default=0.8)
+ap.add_argument('--loss_intra_coef', type=float, default=0.2)
+ap.add_argument('--bs', type=int, default=64, help='Batch size')
+ap.add_argument('--num_epochs', type=int, default=200, help='Number of epochs')
+ap.add_argument('--lr', type=float, default=0.001, help='Learning rate')
+args = vars(ap.parse_args())
+
+
 # Hyper Parameters
-batch_size = 64
-learning_rate = 0.001
+batch_size = args['bs']
+learning_rate = args['lr']
 
 volatility_feedforward_size = 16
 volatility_hidden_dim = 16
@@ -529,15 +540,17 @@ def custom_training(model, train_set, X_text_Test, X_audio_Test, X_pos_Test, X_s
 
 				audio_mixed = mix(audio.numpy(), audio.numpy()[permutation], saliency_audio, saliency_audio[permutation], 0.6, 0.3)
 				text_mixed = mix(text.numpy(), text.numpy()[permutation], saliency_text, saliency_text[permutation], 0.6, 0.3)
-    
 				audio_mixed = tf.convert_to_tensor(audio_mixed)
 				text_mixed = tf.convert_to_tensor(text_mixed)
-				
 				label = tf.cast(label, tf.float32)
 				label_mixed = tf.math.scalar_mul(lam, label) + tf.math.scalar_mul(1 - lam, tf.gather(label, tf.convert_to_tensor(permutation)))
+				speak = tf.cast(speak, tf.float32)
+				speak_mixed = tf.math.scalar_mul(lam, speak) + tf.math.scalar_mul(1 - lam, tf.gather(speak, tf.convert_to_tensor(permutation)))
 
 				super_tape.watch(audio_mixed)
 				super_tape.watch(text_mixed)
+				super_tape.watch(label_mixed)
+				super_tape.watch(speak_mixed)
 
 				logits = model(inputs=[text_mixed, audio_mixed, pos, speak], training=True)
 				loss_value_2 = loss_fn(label_mixed, logits)

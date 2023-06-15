@@ -23,11 +23,13 @@ import datetime
 ap = argparse.ArgumentParser()
 ap.add_argument('--tau', type=int, default=0, help='0 for 3, 1 for 7 and 2 for 15')
 ap.add_argument('--threshold', type=float, default=0.7, help='Saliency threshold')
-ap.add_argument('--loss_original_coef', type=float, default=0.8)
-ap.add_argument('--loss_intra_coef', type=float, default=0.2)
+ap.add_argument('--loss_original_coef', type=float, default=0.7)
+ap.add_argument('--loss_intra_coef', type=float, default=0.15)
+ap.add_argument('--loss_inter_coef', type=float, default=0.15)
 ap.add_argument('--bs', type=int, default=64, help='Batch size')
 ap.add_argument('--num_epochs', type=int, default=200, help='Number of epochs')
 ap.add_argument('--lr', type=float, default=0.001, help='Learning rate')
+ap.add_argument('--lam_inter', type=float, default=0.2)
 args = vars(ap.parse_args())
 
 timestamp = str(datetime.datetime.now())
@@ -446,7 +448,7 @@ print(
 		"------------------------------ Starting training 2-----------------------------------"
 )
 
-def mix(x1, x2, sal1, sal2, threshold, lam):
+def intra_mix(x1, x2, sal1, sal2, threshold, lam):
 	threshold = 1 - threshold
 	mixed = np.zeros(x1.shape)
 	for i in range(x1.shape[0]):
@@ -530,7 +532,7 @@ def custom_training(model, train_set, X_text_Test, X_audio_Test, X_pos_Test, X_s
 	best_report = None
 	best_mcc = None
 	for epoch in range(epochs):
-		running_loss, running_loss_1, running_loss_2 = 0, 0, 0
+		running_loss, running_loss_1, running_loss_2_intra, running_loss_2_inter = 0, 0, 0, 0
 		total = 0
 		for idx, (text, audio, pos, speak, label) in enumerate(train_set):
 			with tf.GradientTape() as super_tape:
@@ -548,28 +550,54 @@ def custom_training(model, train_set, X_text_Test, X_audio_Test, X_pos_Test, X_s
 				
 				permutation = np.random.permutation(audio.shape[0])
 
+				
 				lam = np.random.beta(0.5, 0.5)
-				audio_mixed = mix(audio.numpy(), audio.numpy()[permutation], saliency_audio, saliency_audio[permutation], args['threshold'], lam)
-				text_mixed = mix(text.numpy(), text.numpy()[permutation], saliency_text, saliency_text[permutation], args['threshold'], lam)
-
-				audio_mixed = tf.convert_to_tensor(audio_mixed)
-				text_mixed = tf.convert_to_tensor(text_mixed)
+    
+				temp1 = np.sum(audio, axis=2)
+				temp2 = np.count_nonzero(temp1, axis=1)
+				# lam_not = np.random.beta(0.5, 0.5)
+				lam_not = args['lam_inter']
+				span_len = lam_not * 284
+				lam_inter = 1 - (lam_not * (284 / (temp2 + 1))) #adding 1 for smoothening
+				
+    
+				audio_mixed_intra = intra_mix(audio.numpy(), audio.numpy()[permutation], saliency_audio, saliency_audio[permutation], args['threshold'], lam)
+				text_mixed_intra = intra_mix(text.numpy(), text.numpy()[permutation], saliency_text, saliency_text[permutation], args['threshold'], lam)
+				audio_mixed_intra = tf.convert_to_tensor(audio_mixed_intra)
+				text_mixed_intra = tf.convert_to_tensor(text_mixed_intra)
+    
+				audio_mixed_inter = inter_mix(audio.numpy(), audio.numpy()[permutation], saliency_audio, saliency_audio[permutation], span_len)
+				text_mixed_inter = inter_mix(text.numpy(), text.numpy()[permutation], saliency_text, saliency_text[permutation], span_len)
+				audio_mixed_inter = tf.convert_to_tensor(audio_mixed_inter)
+				text_mixed_inter = tf.convert_to_tensor(text_mixed_inter)
+    
 				label = tf.cast(label, tf.float32)
-				label_mixed = tf.math.scalar_mul(lam, label) + tf.math.scalar_mul(1 - lam, tf.gather(label, tf.convert_to_tensor(permutation)))
+				label_mixed_intra = tf.math.scalar_mul(lam, label) + tf.math.scalar_mul(1 - lam, tf.gather(label, tf.convert_to_tensor(permutation)))
 				speak = tf.cast(speak, tf.float32)
-				speak_mixed = tf.math.scalar_mul(lam, speak) + tf.math.scalar_mul(1 - lam, tf.gather(speak, tf.convert_to_tensor(permutation)))
+				speak_mixed_intra = tf.math.scalar_mul(lam, speak) + tf.math.scalar_mul(1 - lam, tf.gather(speak, tf.convert_to_tensor(permutation)))
 
-				super_tape.watch(audio_mixed)
-				super_tape.watch(text_mixed)
-				super_tape.watch(label_mixed)
-				super_tape.watch(speak_mixed)
+				label_mixed_inter = tf.multiply(tf.constant(lam_inter, dtype=tf.float32), label) + tf.multiply(tf.constant(1 - lam_inter, dtype=tf.float32), tf.gather(label, tf.convert_to_tensor(permutation)))
+				speak_mixed_inter = tf.math.scalar_mul(lam_not, speak) + tf.math.scalar_mul(1 - lam_not, tf.gather(speak, tf.convert_to_tensor(permutation)))
+				super_tape.watch(audio_mixed_intra)
+				super_tape.watch(text_mixed_intra)
+				super_tape.watch(audio_mixed_inter)
+				super_tape.watch(text_mixed_inter)
+				super_tape.watch(label_mixed_intra)
+				super_tape.watch(speak_mixed_intra)
+				super_tape.watch(label_mixed_inter)
+				super_tape.watch(speak_mixed_inter)
 
-				logits = model(inputs=[text_mixed, audio_mixed, pos, speak_mixed], training=True)
-				loss_value_2 = loss_fn(label_mixed, logits)
-				loss_value = args['loss_original_coef'] * loss_value_1 + args['loss_intra_coef'] * loss_value_2
+				logits_intra = model(inputs=[text_mixed_intra, audio_mixed_intra, pos, speak_mixed_intra], training=True)
+				loss_value_2_intra = loss_fn(label_mixed_intra, logits_intra)
+				logits_inter = model(inputs=[text_mixed_inter, audio_mixed_inter, pos, speak_mixed_inter], training=True)
+				loss_value_2_inter = loss_fn(label_mixed_inter, logits_inter)
+    
+				loss_value = args['loss_original_coef'] * loss_value_1 + args['loss_intra_coef'] * loss_value_2_intra + args['loss_inter_coef'] * loss_value_2_inter
+
 
 				running_loss_1 += loss_value_1 * audio.shape[0]
-				running_loss_2 += loss_value_2 * audio.shape[0]
+				running_loss_2_intra += loss_value_2_intra * audio.shape[0]
+				running_loss_2_inter += loss_value_2_inter * audio.shape[0]
 				running_loss += loss_value * audio.shape[0]
 				total += audio.shape[0]
 			
@@ -579,7 +607,8 @@ def custom_training(model, train_set, X_text_Test, X_audio_Test, X_pos_Test, X_s
 			print(f"Epoch {epoch}: (iter {idx}) train_loss={float(loss_value)}")
 		
 		running_loss_1 /= total
-		running_loss_2 /= total
+		running_loss_2_intra /= total
+		running_loss_2_inter /= total
 		running_loss /= total
 
 
@@ -601,7 +630,8 @@ def custom_training(model, train_set, X_text_Test, X_audio_Test, X_pos_Test, X_s
 
 		wandb.log({
 			'Original loss': running_loss_1,
-			'Intra loss': running_loss_2,
+			'Intra loss': running_loss_2_intra,
+			'Inter loss': running_loss_2_inter,
 			'Total loss': running_loss,
 			'F1-score': report['weighted avg']['f1-score'],
 			'MCC': mcc
