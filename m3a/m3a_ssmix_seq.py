@@ -574,7 +574,7 @@ def custom_training(model, train_set, X_text_Test, X_audio_Test, X_pos_Test, X_s
 				span_len = lam_not * 284
 				lam_inter = 1 - (lam_not * (284 / (temp2 + 1))) #adding 1 for smoothening
 				
-				if args['type'] == 'parallel' or (args['type'] == 'sequential' and epoch < args['threshold_epochs']):
+				if args['type'] == 'parallel' or (args['type'] == 'sequential' and (epoch + 1) % args['threshold_epochs'] != 0):
 					print('Doing intra', end=' ')
 					audio_mixed_intra = intra_mix(audio.numpy(), audio.numpy()[permutation], saliency_audio, saliency_audio[permutation], args['threshold'], lam)
 					text_mixed_intra = intra_mix(text.numpy(), text.numpy()[permutation], saliency_text, saliency_text[permutation], args['threshold'], lam)
@@ -594,7 +594,7 @@ def custom_training(model, train_set, X_text_Test, X_audio_Test, X_pos_Test, X_s
 				else:
 					loss_value_2_intra = 0
 
-				if args['type'] == 'parallel' or (args['type'] == 'sequential' and epoch >= args['threshold_epochs']):
+				if args['type'] == 'parallel' or (args['type'] == 'sequential' and (epoch + 1) % args['threshold_epochs'] == 0):
 					print('Doing inter', end=' ')
 					audio_mixed_inter = inter_mix(audio.numpy(), audio.numpy()[permutation], saliency_audio, saliency_audio[permutation], span_len)
 					text_mixed_inter = inter_mix(text.numpy(), text.numpy()[permutation], saliency_text, saliency_text[permutation], span_len)
