@@ -527,7 +527,7 @@ def custom_training(model, train_set, X_text_Test, X_audio_Test, X_pos_Test, X_s
 			from_logits=False,
 			name="binary_crossentropy",
 	)
-	optimizer = tf.keras.optimizers.Adam(learning_rate=0.001)
+	optimizer = tf.keras.optimizers.Adam(learning_rate=learning_rate)
 	epochs = args['num_epochs']
 	best_report = None
 	best_mcc = None
