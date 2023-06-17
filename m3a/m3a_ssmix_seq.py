@@ -22,15 +22,15 @@ import datetime
 
 gpus = tf.config.list_physical_devices('GPU')
 if gpus:
-  try:
-    # Currently, memory growth needs to be the same across GPUs
-    for gpu in gpus:
-      tf.config.experimental.set_memory_growth(gpu, True)
-    logical_gpus = tf.config.list_logical_devices('GPU')
-    print(len(gpus), "Physical GPUs,", len(logical_gpus), "Logical GPUs")
-  except RuntimeError as e:
-    # Memory growth must be set before GPUs have been initialized
-    print(e)
+	try:
+		# Currently, memory growth needs to be the same across GPUs
+		for gpu in gpus:
+			tf.config.experimental.set_memory_growth(gpu, True)
+		logical_gpus = tf.config.list_logical_devices('GPU')
+		print(len(gpus), "Physical GPUs,", len(logical_gpus), "Logical GPUs")
+	except RuntimeError as e:
+		# Memory growth must be set before GPUs have been initialized
+		print(e)
 
 ap = argparse.ArgumentParser()
 ap.add_argument('--tau', type=int, default=0, help='0 for 3, 1 for 7 and 2 for 15')
@@ -40,10 +40,11 @@ ap.add_argument('--loss_intra_coef', type=float, default=0.15)
 ap.add_argument('--loss_inter_coef', type=float, default=0.15)
 ap.add_argument('--bs', type=int, default=64, help='Batch size')
 ap.add_argument('--num_epochs', type=int, default=200, help='Number of epochs')
+ap.add_argument('--threshold_epochs', type=int, default=100, help='Threshold of epochs')
 ap.add_argument('--lr', type=float, default=0.001, help='Learning rate')
 ap.add_argument('--lam_inter', type=float, default=0.2)
 args = vars(ap.parse_args())
-args['type'] = 'parallel'
+args['type'] = 'sequential'
 
 timestamp = str(datetime.datetime.now())
 wandb.init(
@@ -482,58 +483,58 @@ def intra_mix(x1, x2, sal1, sal2, threshold, lam):
 
 def inter_mix(x1, x2, sal1, sal2, span_ratio):
 	
-    # print("\n---------------------------")
-    span_length = int(span_ratio * x1.shape[1])
-    utterance_sal1 = np.sum(sal1, axis=2)
-    utterance_sal2 = np.sum(sal2, axis=2)
-    
-    most_salient1 = [[0, span_length - 1] for i in range(x1.shape[0])]
-    max_sum1 = [utterance_sal1[i][:span_length].sum() for i in range(x1.shape[0])]
-    cur_sum1 = [utterance_sal1[i][:span_length].sum() for i in range(x1.shape[0])]
-    
-    least_salient2 = [[0, span_length - 1] for i in range(x1.shape[0])]
-    min_sum2 = [utterance_sal2[i][:span_length].sum() for i in range(x1.shape[0])]
-    cur_sum2 = [utterance_sal2[i][:span_length].sum() for i in range(x1.shape[0])]
-    
-    # print(most_salient1, max_sum1, cur_sum1)
-    # print("\n\n-------------\n\n")
-    
-    # print(f"Cumulative saliency shape: s1 = {utterance_sal1.shape}, s2 = {utterance_sal2.shape}")
-    # # inp = input()
-    # print(x1)
-    # print(x2)
-    
-    for i in range(x1.shape[0]):
-        for j in range(1, x1.shape[1] - span_length):
-            # print("hey1")
-            # print(cur_sum1[i], utterance_sal1[i, j - 1], utterance_sal1[i, j - 1 + span_length])
-            # print("hey2")
-            new_sum1 = cur_sum1[i] - utterance_sal1[i, j - 1] + utterance_sal1[i, j - 1 + span_length]
-            new_sum2 = cur_sum2[i] - utterance_sal2[i, j - 1] + utterance_sal2[i, j - 1 + span_length]
-            # print("here")
-            # print(new_sum1, max_sum1[i])
-            # print("done")
-            if new_sum1 > max_sum1[i]:
-                max_sum1[i] = new_sum1
-                most_salient1[i] = [j, j - 1 + span_length]
-            if new_sum2 < min_sum2[i]:
-                min_sum2[i] = new_sum2
-                least_salient2[i] = [j, j - 1 + span_length]
-                
-            cur_sum1[i] = new_sum1
-            cur_sum2[i] = new_sum2
-    
-    # print(most_salient1)
-    # print(least_salient2)
-    
-    mixed = x2.copy()
-    for i in range(x1.shape[0]):
-        mixed[i][least_salient2[i][0]:least_salient2[i][1] + 1, :] = x1[i][most_salient1[i][0]:most_salient1[i][1] + 1, :]
-    
-    # print("\n\n -----X---------------X---------------------X-------------X----------")
-    # print(mixed)
-    
-    return mixed
+	# print("\n---------------------------")
+	span_length = int(span_ratio * x1.shape[1])
+	utterance_sal1 = np.sum(sal1, axis=2)
+	utterance_sal2 = np.sum(sal2, axis=2)
+	
+	most_salient1 = [[0, span_length - 1] for i in range(x1.shape[0])]
+	max_sum1 = [utterance_sal1[i][:span_length].sum() for i in range(x1.shape[0])]
+	cur_sum1 = [utterance_sal1[i][:span_length].sum() for i in range(x1.shape[0])]
+	
+	least_salient2 = [[0, span_length - 1] for i in range(x1.shape[0])]
+	min_sum2 = [utterance_sal2[i][:span_length].sum() for i in range(x1.shape[0])]
+	cur_sum2 = [utterance_sal2[i][:span_length].sum() for i in range(x1.shape[0])]
+	
+	# print(most_salient1, max_sum1, cur_sum1)
+	# print("\n\n-------------\n\n")
+	
+	# print(f"Cumulative saliency shape: s1 = {utterance_sal1.shape}, s2 = {utterance_sal2.shape}")
+	# # inp = input()
+	# print(x1)
+	# print(x2)
+	
+	for i in range(x1.shape[0]):
+		for j in range(1, x1.shape[1] - span_length):
+			# print("hey1")
+			# print(cur_sum1[i], utterance_sal1[i, j - 1], utterance_sal1[i, j - 1 + span_length])
+			# print("hey2")
+			new_sum1 = cur_sum1[i] - utterance_sal1[i, j - 1] + utterance_sal1[i, j - 1 + span_length]
+			new_sum2 = cur_sum2[i] - utterance_sal2[i, j - 1] + utterance_sal2[i, j - 1 + span_length]
+			# print("here")
+			# print(new_sum1, max_sum1[i])
+			# print("done")
+			if new_sum1 > max_sum1[i]:
+				max_sum1[i] = new_sum1
+				most_salient1[i] = [j, j - 1 + span_length]
+			if new_sum2 < min_sum2[i]:
+				min_sum2[i] = new_sum2
+				least_salient2[i] = [j, j - 1 + span_length]
+				
+			cur_sum1[i] = new_sum1
+			cur_sum2[i] = new_sum2
+	
+	# print(most_salient1)
+	# print(least_salient2)
+	
+	mixed = x2.copy()
+	for i in range(x1.shape[0]):
+		mixed[i][least_salient2[i][0]:least_salient2[i][1] + 1, :] = x1[i][most_salient1[i][0]:most_salient1[i][1] + 1, :]
+	
+	# print("\n\n -----X---------------X---------------------X-------------X----------")
+	# print(mixed)
+	
+	return mixed
 
 def custom_training(model, train_set, X_text_Test, X_audio_Test, X_pos_Test, X_speak_Test, YTest):
 	loss_fn = tf.keras.losses.BinaryCrossentropy(
@@ -565,7 +566,7 @@ def custom_training(model, train_set, X_text_Test, X_audio_Test, X_pos_Test, X_s
 
 				
 				lam = np.random.beta(0.5, 0.5)
-    
+	
 				temp1 = np.sum(audio, axis=2)
 				temp2 = np.count_nonzero(temp1, axis=1)
 				# lam_not = np.random.beta(0.5, 0.5)
@@ -573,38 +574,46 @@ def custom_training(model, train_set, X_text_Test, X_audio_Test, X_pos_Test, X_s
 				span_len = lam_not * 284
 				lam_inter = 1 - (lam_not * (284 / (temp2 + 1))) #adding 1 for smoothening
 				
-    
-				audio_mixed_intra = intra_mix(audio.numpy(), audio.numpy()[permutation], saliency_audio, saliency_audio[permutation], args['threshold'], lam)
-				text_mixed_intra = intra_mix(text.numpy(), text.numpy()[permutation], saliency_text, saliency_text[permutation], args['threshold'], lam)
-				audio_mixed_intra = tf.convert_to_tensor(audio_mixed_intra)
-				text_mixed_intra = tf.convert_to_tensor(text_mixed_intra)
-    
-				audio_mixed_inter = inter_mix(audio.numpy(), audio.numpy()[permutation], saliency_audio, saliency_audio[permutation], span_len)
-				text_mixed_inter = inter_mix(text.numpy(), text.numpy()[permutation], saliency_text, saliency_text[permutation], span_len)
-				audio_mixed_inter = tf.convert_to_tensor(audio_mixed_inter)
-				text_mixed_inter = tf.convert_to_tensor(text_mixed_inter)
-    
-				label = tf.cast(label, tf.float32)
-				label_mixed_intra = tf.math.scalar_mul(lam, label) + tf.math.scalar_mul(1 - lam, tf.gather(label, tf.convert_to_tensor(permutation)))
-				speak = tf.cast(speak, tf.float32)
-				speak_mixed_intra = tf.math.scalar_mul(lam, speak) + tf.math.scalar_mul(1 - lam, tf.gather(speak, tf.convert_to_tensor(permutation)))
+				if args['type'] == 'parallel' or (args['type'] == 'sequential' and epoch < args['threshold_epochs']):
+					print('Doing intra', end=' ')
+					audio_mixed_intra = intra_mix(audio.numpy(), audio.numpy()[permutation], saliency_audio, saliency_audio[permutation], args['threshold'], lam)
+					text_mixed_intra = intra_mix(text.numpy(), text.numpy()[permutation], saliency_text, saliency_text[permutation], args['threshold'], lam)
+					audio_mixed_intra = tf.convert_to_tensor(audio_mixed_intra)
+					text_mixed_intra = tf.convert_to_tensor(text_mixed_intra)
+					label = tf.cast(label, tf.float32)
+					label_mixed_intra = tf.math.scalar_mul(lam, label) + tf.math.scalar_mul(1 - lam, tf.gather(label, tf.convert_to_tensor(permutation)))
+					speak = tf.cast(speak, tf.float32)
+					speak_mixed_intra = tf.math.scalar_mul(lam, speak) + tf.math.scalar_mul(1 - lam, tf.gather(speak, tf.convert_to_tensor(permutation)))
+					super_tape.watch(audio_mixed_intra)
+					super_tape.watch(text_mixed_intra)
+					super_tape.watch(label_mixed_intra)
+					super_tape.watch(speak_mixed_intra)
 
-				label_mixed_inter = tf.multiply(tf.constant(lam_inter, dtype=tf.float32), label) + tf.multiply(tf.constant(1 - lam_inter, dtype=tf.float32), tf.gather(label, tf.convert_to_tensor(permutation)))
-				speak_mixed_inter = tf.math.scalar_mul(lam_not, speak) + tf.math.scalar_mul(1 - lam_not, tf.gather(speak, tf.convert_to_tensor(permutation)))
-				super_tape.watch(audio_mixed_intra)
-				super_tape.watch(text_mixed_intra)
-				super_tape.watch(audio_mixed_inter)
-				super_tape.watch(text_mixed_inter)
-				super_tape.watch(label_mixed_intra)
-				super_tape.watch(speak_mixed_intra)
-				super_tape.watch(label_mixed_inter)
-				super_tape.watch(speak_mixed_inter)
+					logits_intra = model(inputs=[text_mixed_intra, audio_mixed_intra, pos, speak_mixed_intra], training=True)
+					loss_value_2_intra = loss_fn(label_mixed_intra, logits_intra)
+				else:
+					loss_value_2_intra = 0
 
-				logits_intra = model(inputs=[text_mixed_intra, audio_mixed_intra, pos, speak_mixed_intra], training=True)
-				loss_value_2_intra = loss_fn(label_mixed_intra, logits_intra)
-				logits_inter = model(inputs=[text_mixed_inter, audio_mixed_inter, pos, speak_mixed_inter], training=True)
-				loss_value_2_inter = loss_fn(label_mixed_inter, logits_inter)
-    
+				if args['type'] == 'parallel' or (args['type'] == 'sequential' and epoch >= args['threshold_epochs']):
+					print('Doing inter', end=' ')
+					audio_mixed_inter = inter_mix(audio.numpy(), audio.numpy()[permutation], saliency_audio, saliency_audio[permutation], span_len)
+					text_mixed_inter = inter_mix(text.numpy(), text.numpy()[permutation], saliency_text, saliency_text[permutation], span_len)
+					audio_mixed_inter = tf.convert_to_tensor(audio_mixed_inter)
+					text_mixed_inter = tf.convert_to_tensor(text_mixed_inter)
+					label = tf.cast(label, tf.float32)
+					label_mixed_inter = tf.multiply(tf.constant(lam_inter, dtype=tf.float32), label) + tf.multiply(tf.constant(1 - lam_inter, dtype=tf.float32), tf.gather(label, tf.convert_to_tensor(permutation)))
+					speak_mixed_inter = tf.math.scalar_mul(lam_not, speak) + tf.math.scalar_mul(1 - lam_not, tf.gather(speak, tf.convert_to_tensor(permutation)))
+					
+					super_tape.watch(audio_mixed_inter)
+					super_tape.watch(text_mixed_inter)
+					super_tape.watch(label_mixed_inter)
+					super_tape.watch(speak_mixed_inter)
+
+					logits_inter = model(inputs=[text_mixed_inter, audio_mixed_inter, pos, speak_mixed_inter], training=True)
+					loss_value_2_inter = loss_fn(label_mixed_inter, logits_inter)
+				else:
+					loss_value_2_inter = 0
+		
 				loss_value = args['loss_original_coef'] * loss_value_1 + args['loss_intra_coef'] * loss_value_2_intra + args['loss_inter_coef'] * loss_value_2_inter
 
 
