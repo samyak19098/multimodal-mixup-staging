@@ -1,5 +1,8 @@
 wandb/
 processed_data/
+processed_data_ec/
 *.h5
 __pycache__/
 yfinance-data/
+EarningsCall_Data/
+ec_data.zip

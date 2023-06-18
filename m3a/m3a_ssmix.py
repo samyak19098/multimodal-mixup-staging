@@ -33,6 +33,7 @@ if gpus:
     print(e)
 
 ap = argparse.ArgumentParser()
+ap.add_argument('--data', type=str)
 ap.add_argument('--tau', type=int, default=0, help='0 for 3, 1 for 7 and 2 for 15')
 ap.add_argument('--threshold', type=float, default=0.7, help='Saliency threshold')
 ap.add_argument('--loss_original_coef', type=float, default=0.7)
@@ -42,6 +43,7 @@ ap.add_argument('--bs', type=int, default=64, help='Batch size')
 ap.add_argument('--num_epochs', type=int, default=200, help='Number of epochs')
 ap.add_argument('--lr', type=float, default=0.001, help='Learning rate')
 ap.add_argument('--lam_inter', type=float, default=0.2)
+
 args = vars(ap.parse_args())
 args['type'] = 'parallel'
 
@@ -184,10 +186,14 @@ def createModelV(emd1, emd2, heads, dimFF, dimH, drop, maxlen, maxSpeaker):
 		pos = Input(shape=(maxlen, embed_dim2))
 		speak = Input(shape=(maxLen, maxSpeaker + 1))
 
-		newtext = TimeDistributed(Dense(62))(text)
-
-		attentionText2 = TimeDistributed(Dense(62, activation="softmax"))(newtext)
-		attentionAudio2 = TimeDistributed(Dense(62, activation="softmax"))(audio)
+		if args['data'] == 'm3a':
+			newtext = TimeDistributed(Dense(62))(text)
+			attentionText2 = TimeDistributed(Dense(62, activation="softmax"))(newtext)
+			attentionAudio2 = TimeDistributed(Dense(62, activation="softmax"))(audio)
+		elif args['data'] == 'ec':
+			newtext = TimeDistributed(Dense(29))(text)
+			attentionText2 = TimeDistributed(Dense(29, activation="softmax"))(newtext)
+			attentionAudio2 = TimeDistributed(Dense(29, activation="softmax"))(audio)
 		attentionSum = attentionText2 + attentionAudio2
 		attentionText2 = attentionText2 / attentionSum
 		attentionAudio2 = attentionAudio2 / attentionSum
@@ -223,13 +229,14 @@ def createModelC(emd1, emd2, heads, dimFF, dimH, drop, maxlen, maxSpeaker):
 		audio = Input(shape=(maxlen, embed_dim2))
 		pos = Input(shape=(maxlen, embed_dim2))
 		speak = Input(shape=(maxLen, maxSpeaker + 1))
-
-		newtext = TimeDistributed(Dense(62))(text)
-
-		# attentionText1 = TimeDistributed(Dense(62, activation="softmax"))(newtext)
-		# attentionAudio1 = TimeDistributed(Dense(62, activation="softmax"))(audio)
-		attentionText2 = TimeDistributed(Dense(62, activation="softmax"))(newtext)
-		attentionAudio2 = TimeDistributed(Dense(62, activation="softmax"))(audio)
+		if args['data'] == 'm3a':
+			newtext = TimeDistributed(Dense(62))(text)
+			attentionText2 = TimeDistributed(Dense(62, activation="softmax"))(newtext)
+			attentionAudio2 = TimeDistributed(Dense(62, activation="softmax"))(audio)
+		elif args['data'] == 'ec':
+			newtext = TimeDistributed(Dense(29))(text)
+			attentionText2 = TimeDistributed(Dense(29, activation="softmax"))(newtext)
+			attentionAudio2 = TimeDistributed(Dense(29, activation="softmax"))(audio)
 		attentionSum = attentionText2 + attentionAudio2
 		attentionText2 = attentionText2 / attentionSum
 		attentionAudio2 = attentionAudio2 / attentionSum
@@ -264,138 +271,19 @@ def createModelC(emd1, emd2, heads, dimFF, dimH, drop, maxlen, maxSpeaker):
 # print(args)
 
 
-YVals = pd.read_csv("Y_Volatility.csv")
-files = YVals["File Name"]
-dates = YVals["Date"]
+# YVals = pd.read_csv("Y_Volatility.csv")
+# files = YVals["File Name"]
+# dates = YVals["Date"]
 
 path_to_files = "Dataset/"  # insert path with last /
-
-# X = []
-# maxLen = 0
-# index = 1
-# for i in tqdm(range(len(files))):
-# 		f = files[i][:-4]
-# 		d = str(dates[i]).split("/")
-# 		date = d[-1] + "-"
-# 		if len(d[0]) == 2:
-# 				date += d[0] + "-"
-# 		else:
-# 				date += "0" + d[0] + "-"
-# 		if len(d[1]) == 2:
-# 				date += d[1]
-# 		else:
-# 				date += "0" + d[1]
-# 		f = f.replace("&", "_")
-# 		folder = path_to_files + f + "_" + date + "/"
-# 		df = pd.read_csv(folder + "Text.csv")
-# 		df = df.drop([df.columns[0], df.columns[1]], axis=1)
-# 		xEmb = df.to_numpy()
-# 		X.append(xEmb)
-# 		maxLen = max(maxLen, xEmb.shape[0])
-# 		# print(index,f)
-# 		index += 1
-
-# for i in tqdm(range(len(X))):
-# 		xEmb = X[i]
-# 		pad = maxLen - xEmb.shape[0]
-# 		if pad != 0:
-# 				padding = np.zeros((pad, 768))
-# 				xEmb = np.concatenate((padding, xEmb), axis=0)
-# 		X[i] = xEmb
-# X_text = np.array(X)
-
-# Xspeak = []
-# maxSpeaker = 0
-# index = 1
-# for i in tqdm(range(len(files))):
-# 		f = files[i][:-4]
-# 		d = str(dates[i]).split("/")
-# 		date = d[-1] + "-"
-# 		if len(d[0]) == 2:
-# 				date += d[0] + "-"
-# 		else:
-# 				date += "0" + d[0] + "-"
-# 		if len(d[1]) == 2:
-# 				date += d[1]
-# 		else:
-# 				date += "0" + d[1]
-# 		f = f.replace("&", "_")
-# 		folder = path_to_files + f + "_" + date + "/"
-# 		df = pd.read_csv(folder + "Text.csv")
-# 		speaker = df["Speaker"]
-# 		Xspeak.append(speaker)
-# 		maxSpeaker = max(maxSpeaker, max(speaker))
-
-# for i in tqdm(range(len(Xspeak))):
-# 		speaker = Xspeak[i]
-# 		s = []
-# 		for j in range(len(speaker)):
-# 				temp = np.zeros((maxSpeaker + 1,))
-# 				temp[speaker[j]] = 1
-# 				s.append(temp)
-# 		s = np.array(s)
-# 		pad = maxLen - speaker.shape[0]
-# 		if pad != 0:
-# 				padding = np.zeros((pad, maxSpeaker + 1))
-# 				s = np.concatenate((padding, s), axis=0)
-# 		Xspeak[i] = s
-# Xspeak = np.array(Xspeak)
-
-# X = []
-# maxLen = 0
-# index = 1
-# for i in tqdm(range(len(files))):
-# 		f = files[i][:-4]
-# 		d = str(dates[i]).split("/")
-# 		date = d[-1] + "-"
-# 		if len(d[0]) == 2:
-# 				date += d[0] + "-"
-# 		else:
-# 				date += "0" + d[0] + "-"
-# 		if len(d[1]) == 2:
-# 				date += d[1]
-# 		else:
-# 				date += "0" + d[1]
-# 		f = f.replace("&", "_")
-# 		folder = path_to_files + f + "_" + date + "/"
-# 		df = pd.read_csv(folder + "Audio.csv")
-# 		df = df.drop([df.columns[0]], axis=1)
-# 		xEmb = df.to_numpy()
-# 		X.append(xEmb)
-# 		maxLen = max(maxLen, xEmb.shape[0])
-# 		index += 1
-
-# for i in tqdm(range(len(X))):
-# 		xEmb = X[i]
-# 		pad = maxLen - xEmb.shape[0]
-# 		if pad != 0:
-# 				padding = np.zeros((pad, 62))
-# 				xEmb = np.concatenate((padding, xEmb), axis=0)
-# 		X[i] = xEmb
-# X_audio = np.array(X)
-# for i in range(len(X)):
-# 		for j in range(len(X[i])):
-# 				for k in range(len(X[i][j])):
-# 						if np.isnan(X[i][j][k]):
-# 				int				X_audio[i][j][k] = 0
-
-# pos = np.zeros(X_audio.shape)
-# for i in tqdm(range(len(X_audio))):
-# 		for j in range(len(X_audio[i])):
-# 				for d in range(len(X_audio[i][j])):
-# 						if d % 2 == 0:
-# 								p = math.sin(j / pow(10000, d / 62))
-# 								pos[i][j][d] = p
-# 						else:
-# 								p = math.cos(j / pow(10000, (d - 1) / 62))
-# 								pos[i][j][d] = p
-
-# print(X_text.shape, X_audio.shape, Xspeak.shape, pos.shape)
-
-trainIndex = pd.read_csv("Train_index.csv")
-trainIndex = trainIndex["index"]
-testIndex = pd.read_csv("Test_index.csv")
-testIndex = testIndex["index"]
+if args['data'] == 'm3a':
+	trainIndex = pd.read_csv("Train_index.csv")
+	trainIndex = trainIndex["index"]
+	testIndex = pd.read_csv("Test_index.csv")
+	testIndex = testIndex["index"]
+elif args['data'] == 'ec':
+	trainIndex = np.load('/home/shivama2/ssmix/multimodal-mixup-staging/m3a/EC_Dataset/EarningsCall_Data/processed_data_ec/train_idx.npy')
+	testIndex = np.load('/home/shivama2/ssmix/multimodal-mixup-staging/m3a/EC_Dataset/EarningsCall_Data/processed_data_ec/test_idx.npy')
 
 # X_text_Train = X_text[trainIndex]
 # X_text_Test = X_text[testIndex]
@@ -406,25 +294,36 @@ testIndex = testIndex["index"]
 # X_speak_Train = Xspeak[trainIndex]
 # X_speak_Test = Xspeak[testIndex]
 
-X_text_Train = np.load('processed_data/x_text_train.npy')
-X_text_Test = np.load('processed_data/x_text_test.npy')
-X_audio_Train = np.load('processed_data/x_audio_train.npy')
-X_audio_Test = np.load('processed_data/x_audio_test.npy')
-X_pos_Train = np.load('processed_data/x_pos_train.npy')
-X_pos_Test = np.load('processed_data/x_pos_test.npy')
-X_speak_Train = np.load('processed_data/x_speak_train.npy')
-X_speak_Test = np.load('processed_data/x_speak_test.npy')
+if args['data'] == 'm3a':
+    PROCESSED_DATA_BASE = '/home/shivama2/ssmix/multimodal-mixup-staging/m3a/EC_Dataset/EarningsCall_Data/processed_data_ec/'
+elif args['data'] == 'ec':
+    PROCESSED_DATA_BASE = '/home/shivama2/ssmix/multimodal-mixup-staging/m3a/EC_Dataset/EarningsCall_Data/processed_data_ec/'
+X_text_Train = np.load(PROCESSED_DATA_BASE + 'x_text_train.npy')
+X_text_Test = np.load(PROCESSED_DATA_BASE + 'x_text_test.npy')
+X_audio_Train = np.load(PROCESSED_DATA_BASE + 'x_audio_train.npy', allow_pickle=True).astype(np.float64)
+X_audio_Test = np.load(PROCESSED_DATA_BASE + 'x_audio_test.npy', allow_pickle=True).astype(np.float64)
+X_pos_Train = np.load(PROCESSED_DATA_BASE + 'x_pos_train.npy')
+X_pos_Test = np.load(PROCESSED_DATA_BASE + 'x_pos_test.npy')
+X_speak_Train = np.load(PROCESSED_DATA_BASE + 'x_speak_train.npy')
+X_speak_Test = np.load(PROCESSED_DATA_BASE + 'x_speak_test.npy')
+print("TRAIN : ", X_text_Train.shape, X_audio_Train.shape, X_pos_Train.shape, X_speak_Train.shape, )
+print("TEST : ", X_text_Test.shape, X_audio_Test.shape, X_pos_Test.shape, X_speak_Test.shape)
 
-maxLen = 284
-maxSpeaker = 30
+if args['data'] == 'm3a':
+	maxLen = 284
+	maxSpeaker = 30
+elif args['data'] == 'ec':
+    maxLen = 495
+    maxSpeaker = 30
 
-YVals = pd.read_csv("Y_Volatility.csv")
-YT3 = YVals["vFuture3"]
-YT7 = YVals["vFuture7"]
-YT15 = YVals["vFuture15"]
 
-Ys = [YT3, YT7, YT15]
-YPrint = ["Tau 3", "Tau 7", "Tau 15"]
+# YVals = pd.read_csv("Y_Volatility.csv")
+# YT3 = YVals["vFuture3"]
+# YT7 = YVals["vFuture7"]
+# YT15 = YVals["vFuture15"]
+
+# Ys = [YT3, YT7, YT15]
+# YPrint = ["Tau 3", "Tau 7", "Tau 15"]
 # print("------------------------------ Starting training -----------------------------------")
 # for i in range(3):
 #   print(f"At i = {i}")
@@ -448,8 +347,10 @@ YPrint = ["Tau 3", "Tau 7", "Tau 15"]
 #   r = mean_squared_error(YTest,predTest)
 #   print('MSE for Testing Set for ',YPrint[i],': ',r)
 #   print()
-
-YVals = pd.read_csv("Y_Movement.csv")
+if args['data'] == 'm3a':
+	YVals = pd.read_csv("Y_Movement.csv")
+else:
+    YVals = pd.read_csv(PROCESSED_DATA_BASE + "Y_Movement.csv")
 YT3 = YVals["YT3"]
 YT7 = YVals["YT7"]
 YT15 = YVals["YT15"]
@@ -570,8 +471,12 @@ def custom_training(model, train_set, X_text_Test, X_audio_Test, X_pos_Test, X_s
 				temp2 = np.count_nonzero(temp1, axis=1)
 				# lam_not = np.random.beta(0.5, 0.5)
 				lam_not = args['lam_inter']
-				span_len = lam_not * 284
-				lam_inter = 1 - (lam_not * (284 / (temp2 + 1))) #adding 1 for smoothening
+				if args['data'] == 'm3a':
+					span_len = lam_not * 284
+					lam_inter = 1 - (lam_not * (284 / (temp2 + 1))) #adding 1 for smoothening
+				elif args['data'] == 'ec':
+					span_len = lam_not * 495
+					lam_inter = 1 - (lam_not * (495 / (temp2 + 1))) #adding 1 for smoothening
 				
     
 				audio_mixed_intra = intra_mix(audio.numpy(), audio.numpy()[permutation], saliency_audio, saliency_audio[permutation], args['threshold'], lam)
@@ -654,8 +559,6 @@ def custom_training(model, train_set, X_text_Test, X_audio_Test, X_pos_Test, X_s
 		'Best MCC': best_mcc
 	})
 
-
-
 i = args['tau']
 print(f"At i = {i}")
 YTrain = Ys[i][trainIndex]
@@ -675,10 +578,18 @@ modelN = f"saved-ModelC " + YPrint[i] + ".h5"
 mc = tf.keras.callbacks.ModelCheckpoint(
 		modelN, monitor="val_accuracy", verbose=0, save_best_only=True
 )
+
+if args['data'] == 'm3a':
+    num_audio_feats = 62
+    num_heads = 3
+elif args['data'] == 'ec':
+    num_audio_feats = 29
+    num_heads = 4
+
 model = createModelC(
 		768,
-		62,
-		3,
+		num_audio_feats,
+		num_heads,
 		movement_feedforward_size,
 		movement_hidden_dim,
 		movement_dropout,
