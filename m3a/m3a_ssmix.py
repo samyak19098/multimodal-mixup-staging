@@ -20,6 +20,12 @@ import wandb
 import argparse
 import datetime
 
+# from tensorflow.python.framework.ops import disable_eager_execution 
+# disable_eager_execution()
+
+# tf.config.experimental_run_functions_eagerly(True)
+
+
 gpus = tf.config.list_physical_devices('GPU')
 if gpus:
   try:
@@ -184,7 +190,7 @@ def createModelV(emd1, emd2, heads, dimFF, dimH, drop, maxlen, maxSpeaker):
 		text = Input(shape=(maxlen, embed_dim1))
 		audio = Input(shape=(maxlen, embed_dim2))
 		pos = Input(shape=(maxlen, embed_dim2))
-		speak = Input(shape=(maxLen, maxSpeaker + 1))
+		speak = Input(shape=(maxlen, maxSpeaker + 1))
 
 		if args['data'] == 'm3a':
 			newtext = TimeDistributed(Dense(62))(text)
@@ -216,6 +222,13 @@ def createModelV(emd1, emd2, heads, dimFF, dimH, drop, maxlen, maxSpeaker):
 		model = keras.Model(inputs=[text, audio, pos, speak], outputs=outputs)
 		return model
 
+def tensor_sum(x):
+	print(x)
+	return tf.keras.backend.sum(
+		tf.keras.backend.get_value(x),
+		axis=None,
+		keepdims=False
+	)
 
 def createModelC(emd1, emd2, heads, dimFF, dimH, drop, maxlen, maxSpeaker):
 		embed_dim1 = emd1  # Embedding size for Text
@@ -228,7 +241,11 @@ def createModelC(emd1, emd2, heads, dimFF, dimH, drop, maxlen, maxSpeaker):
 		text = Input(shape=(maxlen, embed_dim1))
 		audio = Input(shape=(maxlen, embed_dim2))
 		pos = Input(shape=(maxlen, embed_dim2))
-		speak = Input(shape=(maxLen, maxSpeaker + 1))
+		speak = Input(shape=(maxlen, maxSpeaker + 1))
+		fused_passed = Input(shape=(maxlen, 62))
+		weights = Input(shape=(maxlen, 62))
+  
+  
 		if args['data'] == 'm3a':
 			newtext = TimeDistributed(Dense(62))(text)
 			attentionText2 = TimeDistributed(Dense(62, activation="softmax"))(newtext)
@@ -244,7 +261,8 @@ def createModelC(emd1, emd2, heads, dimFF, dimH, drop, maxlen, maxSpeaker):
 		attendedText = newtext * attentionText2
 		attendedAudio = audio * attentionAudio2
 
-		fused = attendedText*attentionText2 + attendedAudio*attentionAudio2 + pos
+		fused_current = attendedText*attentionText2 + attendedAudio*attentionAudio2 + pos
+		fused = fused_current * weights + fused_passed
 		fusedSpeaker = Concatenate(axis=2)([fused, speak])
 
 		# Insert mixup
@@ -258,7 +276,7 @@ def createModelC(emd1, emd2, heads, dimFF, dimH, drop, maxlen, maxSpeaker):
 		x = layers.Dropout(dropout)(x)
 		outputs = layers.Dense(1, activation="sigmoid")(x)
 
-		model = keras.Model(inputs=[text, audio, pos, speak], outputs=[outputs])
+		model = keras.Model(inputs=[text, audio, pos, speak, fused_passed, weights], outputs=[outputs, fused])
 		return model
 
 
@@ -295,7 +313,8 @@ elif args['data'] == 'ec':
 # X_speak_Test = Xspeak[testIndex]
 
 if args['data'] == 'm3a':
-    PROCESSED_DATA_BASE = '/home/shivama2/ssmix/multimodal-mixup-staging/m3a/EC_Dataset/EarningsCall_Data/processed_data_ec/'
+    # PROCESSED_DATA_BASE = '/home/shivama2/ssmix/multimodal-mixup-staging/m3a/EC_Dataset/EarningsCall_Data/processed_data_ec/'
+    PROCESSED_DATA_BASE = '/home/rajivratn/sriram/Speech-Coherence-Project/Samyak/m3a/multimodal-mixup-staging/m3a/processed_data/'
 elif args['data'] == 'ec':
     PROCESSED_DATA_BASE = '/home/shivama2/ssmix/multimodal-mixup-staging/m3a/EC_Dataset/EarningsCall_Data/processed_data_ec/'
 X_text_Train = np.load(PROCESSED_DATA_BASE + 'x_text_train.npy')
@@ -316,6 +335,13 @@ elif args['data'] == 'ec':
     maxLen = 495
     maxSpeaker = 30
 
+ZERO_TENSOR = tf.zeros([args['bs'], maxLen, 62])
+ONES_TENSOR = tf.ones([args['bs'], maxLen, 62])
+
+if args['data'] == 'm3a':
+    ZERO_TENSOR_TEST = tf.zeros([119, maxLen, 62])
+    ONES_TENSOR_TEST = tf.ones([119, maxLen, 62])
+    
 
 # YVals = pd.read_csv("Y_Volatility.csv")
 # YT3 = YVals["vFuture3"]
@@ -453,14 +479,16 @@ def custom_training(model, train_set, X_text_Test, X_audio_Test, X_pos_Test, X_s
 				with tf.GradientTape(persistent=True) as tape:
 					tape.watch(audio)
 					tape.watch(text)
-					logits = model(inputs=[text, audio, pos, speak], training=True)
+					logits, fused = model(inputs=[text, audio, pos, speak, ZERO_TENSOR, ONES_TENSOR], training=True)
 					loss_value_1 = loss_fn(label, logits)
 
 				grads_audio = tape.gradient(loss_value_1, audio)
 				grads_text = tape.gradient(loss_value_1, text)
+				grads_fused = tape.gradient(loss_value_1, fused)
 
 				saliency_audio = np.abs(grads_audio.numpy())
 				saliency_text = np.abs(grads_text.numpy())
+				saliency_fused = np.abs(grads_fused.numpy())
 				
 				permutation = np.random.permutation(audio.shape[0])
 
@@ -484,10 +512,13 @@ def custom_training(model, train_set, X_text_Test, X_audio_Test, X_pos_Test, X_s
 				audio_mixed_intra = tf.convert_to_tensor(audio_mixed_intra)
 				text_mixed_intra = tf.convert_to_tensor(text_mixed_intra)
     
-				audio_mixed_inter = inter_mix(audio.numpy(), audio.numpy()[permutation], saliency_audio, saliency_audio[permutation], span_len)
-				text_mixed_inter = inter_mix(text.numpy(), text.numpy()[permutation], saliency_text, saliency_text[permutation], span_len)
-				audio_mixed_inter = tf.convert_to_tensor(audio_mixed_inter)
-				text_mixed_inter = tf.convert_to_tensor(text_mixed_inter)
+				# audio_mixed_inter = inter_mix(audio.numpy(), audio.numpy()[permutation], saliency_audio, saliency_audio[permutation], span_len)
+				# text_mixed_inter = inter_mix(text.numpy(), text.numpy()[permutation], saliency_text, saliency_text[permutation], span_len)
+				# audio_mixed_inter = tf.convert_to_tensor(audio_mixed_inter)
+				# text_mixed_inter = tf.convert_to_tensor(text_mixed_inter)
+				
+				fused_mixed_inter = inter_mix(fused.numpy(), fused.numpy()[permutation], saliency_fused, saliency_fused[permutation], span_len)
+				fused_mixed_inter = tf.convert_to_tensor(fused_mixed_inter)
     
 				label = tf.cast(label, tf.float32)
 				label_mixed_intra = tf.math.scalar_mul(lam, label) + tf.math.scalar_mul(1 - lam, tf.gather(label, tf.convert_to_tensor(permutation)))
@@ -498,16 +529,18 @@ def custom_training(model, train_set, X_text_Test, X_audio_Test, X_pos_Test, X_s
 				speak_mixed_inter = tf.math.scalar_mul(lam_not, speak) + tf.math.scalar_mul(1 - lam_not, tf.gather(speak, tf.convert_to_tensor(permutation)))
 				super_tape.watch(audio_mixed_intra)
 				super_tape.watch(text_mixed_intra)
-				super_tape.watch(audio_mixed_inter)
-				super_tape.watch(text_mixed_inter)
+				# super_tape.watch(audio_mixed_inter)
+				# super_tape.watch(text_mixed_inter)
 				super_tape.watch(label_mixed_intra)
 				super_tape.watch(speak_mixed_intra)
 				super_tape.watch(label_mixed_inter)
 				super_tape.watch(speak_mixed_inter)
+				super_tape.watch(fused_mixed_inter)			
 
-				logits_intra = model(inputs=[text_mixed_intra, audio_mixed_intra, pos, speak_mixed_intra], training=True)
+				
+				logits_intra, _ = model(inputs=[text_mixed_intra, audio_mixed_intra, pos, speak_mixed_intra, ZERO_TENSOR, ONES_TENSOR], training=True)
 				loss_value_2_intra = loss_fn(label_mixed_intra, logits_intra)
-				logits_inter = model(inputs=[text_mixed_inter, audio_mixed_inter, pos, speak_mixed_inter], training=True)
+				logits_inter, _ = model(inputs=[text_mixed_intra, audio_mixed_intra, pos, speak_mixed_inter, fused_mixed_inter, ZERO_TENSOR], training=True)
 				loss_value_2_inter = loss_fn(label_mixed_inter, logits_inter)
     
 				loss_value = args['loss_original_coef'] * loss_value_1 + args['loss_intra_coef'] * loss_value_2_intra + args['loss_inter_coef'] * loss_value_2_inter
@@ -531,8 +564,8 @@ def custom_training(model, train_set, X_text_Test, X_audio_Test, X_pos_Test, X_s
 
 
 		predTest = model.predict(
-				[X_text_Test, X_audio_Test, X_pos_Test, X_speak_Test]
-		).round()
+				[X_text_Test, X_audio_Test, X_pos_Test, X_speak_Test, ZERO_TENSOR_TEST, ONES_TENSOR_TEST]
+		)[0].round()
 		mcc = matthews_corrcoef(YTest, predTest)
 		f1 = f1_score(YTest, predTest)
 		print("F1 for Testing Set for ", YPrint[i], ": ", f1)
@@ -567,7 +600,7 @@ YTest = Ys[i][testIndex]
 train_set = tf.data.Dataset.from_tensor_slices(
 		(X_text_Train, X_audio_Train, X_pos_Train, X_speak_Train, YTrain)
 )
-train_set = train_set.batch(batch_size=batch_size)
+train_set = train_set.batch(batch_size=batch_size, drop_remainder=True)
 test_set = tf.data.Dataset.from_tensor_slices(
 		(X_text_Test, X_audio_Test, X_pos_Test, X_speak_Test, YTest)
 )
