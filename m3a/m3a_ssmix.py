@@ -241,8 +241,12 @@ def createModelC(emd1, emd2, heads, dimFF, dimH, drop, maxlen, maxSpeaker):
 		audio = Input(shape=(maxlen, embed_dim2))
 		pos = Input(shape=(maxlen, embed_dim2))
 		speak = Input(shape=(maxlen, maxSpeaker + 1))
-		fused_passed = Input(shape=(maxlen, 62))
-		weights = Input(shape=(maxlen, 62))
+		if args['data'] == 'm3a':
+			fused_passed = Input(shape=(maxlen, 62))
+			weights = Input(shape=(maxlen, 62))
+		elif args['data'] == 'ec':
+			fused_passed = Input(shape=(maxlen, 29))
+			weights = Input(shape=(maxlen, 29))
   
   
 		if args['data'] == 'm3a':
@@ -312,8 +316,8 @@ elif args['data'] == 'ec':
 # X_speak_Test = Xspeak[testIndex]
 
 if args['data'] == 'm3a':
-    # PROCESSED_DATA_BASE = '/home/shivama2/ssmix/multimodal-mixup-staging/m3a/EC_Dataset/EarningsCall_Data/processed_data_ec/'
-    PROCESSED_DATA_BASE = '/home/rajivratn/sriram/Speech-Coherence-Project/Samyak/m3a/multimodal-mixup-staging/m3a/processed_data/'
+    PROCESSED_DATA_BASE = '/home/shivama2/ssmix/multimodal-mixup-staging/m3a/processed_data/'
+    # PROCESSED_DATA_BASE = '/home/rajivratn/sriram/Speech-Coherence-Project/Samyak/m3a/multimodal-mixup-staging/m3a/processed_data/'
 elif args['data'] == 'ec':
     PROCESSED_DATA_BASE = '/home/shivama2/ssmix/multimodal-mixup-staging/m3a/EC_Dataset/EarningsCall_Data/processed_data_ec/'
 X_text_Train = np.load(PROCESSED_DATA_BASE + 'x_text_train.npy')
@@ -333,14 +337,19 @@ if args['data'] == 'm3a':
 elif args['data'] == 'ec':
     maxLen = 495
     maxSpeaker = 30
-
-ZERO_TENSOR = tf.zeros([args['bs'], maxLen, 62])
-ONES_TENSOR = tf.ones([args['bs'], maxLen, 62])
+if args['data'] == 'm3a':
+	ZERO_TENSOR = tf.zeros([args['bs'], maxLen, 62])
+	ONES_TENSOR = tf.ones([args['bs'], maxLen, 62])
+elif args['data'] == 'ec':
+	ZERO_TENSOR = tf.zeros([args['bs'], maxLen, 29])
+	ONES_TENSOR = tf.ones([args['bs'], maxLen, 29])
 
 if args['data'] == 'm3a':
     ZERO_TENSOR_TEST = tf.zeros([119, maxLen, 62])
     ONES_TENSOR_TEST = tf.ones([119, maxLen, 62])
-    
+elif args['data'] == 'ec':
+    ZERO_TENSOR_TEST = tf.zeros([119, maxLen, 29])
+    ONES_TENSOR_TEST = tf.ones([119, maxLen, 29])
 
 # YVals = pd.read_csv("Y_Volatility.csv")
 # YT3 = YVals["vFuture3"]
