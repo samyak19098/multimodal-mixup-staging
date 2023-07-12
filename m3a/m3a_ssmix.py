@@ -49,9 +49,8 @@ ap.add_argument('--bs', type=int, default=64, help='Batch size')
 ap.add_argument('--num_epochs', type=int, default=200, help='Number of epochs')
 ap.add_argument('--lr', type=float, default=0.001, help='Learning rate')
 ap.add_argument('--lam_inter', type=float, default=0.2)
-
+ap.add_argument('--type', type=str, default="parallel")
 args = vars(ap.parse_args())
-args['type'] = 'parallel'
 
 timestamp = str(datetime.datetime.now())
 wandb.init(
