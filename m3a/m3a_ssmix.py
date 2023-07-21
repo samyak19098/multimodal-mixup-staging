@@ -316,8 +316,8 @@ elif args['data'] == 'ec':
 # X_speak_Test = Xspeak[testIndex]
 
 if args['data'] == 'm3a':
-    PROCESSED_DATA_BASE = '/home/shivama2/ssmix/multimodal-mixup-staging/m3a/processed_data/'
-    # PROCESSED_DATA_BASE = '/home/rajivratn/sriram/Speech-Coherence-Project/Samyak/m3a/multimodal-mixup-staging/m3a/processed_data/'
+    # PROCESSED_DATA_BASE = '/home/shivama2/ssmix/multimodal-mixup-staging/m3a/processed_data/'
+    PROCESSED_DATA_BASE = '/home/rajivratn/sriram/Speech-Coherence-Project/Samyak/m3a/multimodal-mixup-staging/m3a/processed_data/'
 elif args['data'] == 'ec':
     PROCESSED_DATA_BASE = '/home/shivama2/ssmix/multimodal-mixup-staging/m3a/EC_Dataset/EarningsCall_Data/processed_data_ec/'
 X_text_Train = np.load(PROCESSED_DATA_BASE + 'x_text_train.npy')
@@ -348,8 +348,8 @@ if args['data'] == 'm3a':
     ZERO_TENSOR_TEST = tf.zeros([119, maxLen, 62])
     ONES_TENSOR_TEST = tf.ones([119, maxLen, 62])
 elif args['data'] == 'ec':
-    ZERO_TENSOR_TEST = tf.zeros([119, maxLen, 29])
-    ONES_TENSOR_TEST = tf.ones([119, maxLen, 29])
+    ZERO_TENSOR_TEST = tf.zeros([258, maxLen, 29])
+    ONES_TENSOR_TEST = tf.ones([258, maxLen, 29])
 
 # YVals = pd.read_csv("Y_Volatility.csv")
 # YT3 = YVals["vFuture3"]
@@ -570,6 +570,7 @@ def custom_training(model, train_set, X_text_Test, X_audio_Test, X_pos_Test, X_s
 		running_loss_2_inter /= total
 		running_loss /= total
 
+		print(f"Shapes = {X_text_Test.shape}, {X_audio_Test.shape}, {ZERO_TENSOR_TEST.shape}")
 
 		predTest = model.predict(
 				[X_text_Test, X_audio_Test, X_pos_Test, X_speak_Test, ZERO_TENSOR_TEST, ONES_TENSOR_TEST]
