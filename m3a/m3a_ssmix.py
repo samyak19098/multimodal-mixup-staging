@@ -577,8 +577,8 @@ def custom_training(model, train_set, X_text_Test, X_audio_Test, X_pos_Test, X_s
 		)[0].round()
 		mcc = matthews_corrcoef(YTest, predTest)
 		f1 = f1_score(YTest, predTest)
-		print("F1 for Testing Set for ", YPrint[i], ": ", f1)
-		print("MCC for Testing Set for ", YPrint[i], ": ", mcc)
+		print("--> F1 for Testing Set for ", YPrint[i], ": ", f1)
+		print("--> MCC for Testing Set for ", YPrint[i], ": ", mcc)
 		report = classification_report(YTest, predTest, output_dict=True)
 		if best_report is None:
 			best_report = report
