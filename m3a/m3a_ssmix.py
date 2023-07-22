@@ -590,9 +590,9 @@ def custom_training(model, train_set, X_text_Test, X_audio_Test, X_pos_Test, X_s
 		print(f"Shapes = {X_text_Test.shape}, {X_audio_Test.shape}, {ZERO_TENSOR_TEST.shape}")
 
 		if args['components'] == 'audio':
-			X_text_Test = ZERO_TEXT_TENSOR
+			X_text_Test = ZERO_TEXT_TENSO_TEST
 		elif args['components'] == 'text':
-			X_audio_Test = ZERO_AUDIO_TENSOR
+			X_audio_Test = ZERO_AUDIO_TENSOR_TEST
 
 		predTest = model.predict(
 				[X_text_Test, X_audio_Test, X_pos_Test, X_speak_Test, ZERO_TENSOR_TEST, ONES_TENSOR_TEST]
