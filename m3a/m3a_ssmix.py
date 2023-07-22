@@ -51,6 +51,7 @@ ap.add_argument('--lr', type=float, default=0.001, help='Learning rate')
 ap.add_argument('--lam_inter', type=float, default=0.2)
 ap.add_argument('--type', type=str, default="parallel")
 ap.add_argument('--intra_saliency', type=bool, default=True)
+ap.add_argument('--components', type=str, default='both')
 args = vars(ap.parse_args())
 
 timestamp = str(datetime.datetime.now())
@@ -335,22 +336,32 @@ print("TEST : ", X_text_Test.shape, X_audio_Test.shape, X_pos_Test.shape, X_spea
 if args['data'] == 'm3a':
 	maxLen = 284
 	maxSpeaker = 30
-elif args['data'] == 'ec':
-    maxLen = 495
-    maxSpeaker = 30
-if args['data'] == 'm3a':
 	ZERO_TENSOR = tf.zeros([args['bs'], maxLen, 62])
 	ONES_TENSOR = tf.ones([args['bs'], maxLen, 62])
+	ZERO_TENSOR_TEST = tf.zeros([119, maxLen, 62])
+	ONES_TENSOR_TEST = tf.ones([119, maxLen, 62])
+
+	ZERO_AUDIO_TENSOR = tf.zeros([args['bs'], maxLen, 62])
+	ZERO_TEXT_TENSOR = tf.zeros([args['bs'], maxLen, 768])
+
+	ZERO_AUDIO_TENSOR_TEST = tf.zeros([119, maxLen, 62])
+	ZERO_TEXT_TENSOR_TEST = tf.zeros([119, maxLen, 768])
 elif args['data'] == 'ec':
+	maxLen = 495
+	maxSpeaker = 30
+
 	ZERO_TENSOR = tf.zeros([args['bs'], maxLen, 29])
 	ONES_TENSOR = tf.ones([args['bs'], maxLen, 29])
 
-if args['data'] == 'm3a':
-    ZERO_TENSOR_TEST = tf.zeros([119, maxLen, 62])
-    ONES_TENSOR_TEST = tf.ones([119, maxLen, 62])
-elif args['data'] == 'ec':
-    ZERO_TENSOR_TEST = tf.zeros([258, maxLen, 29])
-    ONES_TENSOR_TEST = tf.ones([258, maxLen, 29])
+	ZERO_TENSOR_TEST = tf.zeros([258, maxLen, 29])
+	ONES_TENSOR_TEST = tf.ones([258, maxLen, 29])
+
+	ZERO_AUDIO_TENSOR = tf.zeros([args['bs'], maxLen, 29])
+	ZERO_TEXT_TENSOR = tf.zeros([args['bs'], maxLen, 768])
+
+	ZERO_AUDIO_TENSOR_TEST = tf.zeros([258, maxLen, 29])
+	ZERO_TEXT_TENSOR_TEST = tf.zeros([258, maxLen, 768])
+	
 
 # YVals = pd.read_csv("Y_Volatility.csv")
 # YT3 = YVals["vFuture3"]
@@ -485,6 +496,10 @@ def custom_training(model, train_set, X_text_Test, X_audio_Test, X_pos_Test, X_s
 		running_loss, running_loss_1, running_loss_2_intra, running_loss_2_inter = 0, 0, 0, 0
 		total = 0
 		for idx, (text, audio, pos, speak, label) in enumerate(train_set):
+			if args['components'] == 'audio':
+				text = ZERO_TEXT_TENSOR
+			elif args['components'] == 'text':
+				audio = ZERO_AUDIO_TENSOR
 			with tf.GradientTape() as super_tape:
 				with tf.GradientTape(persistent=True) as tape:
 					tape.watch(audio)
@@ -573,6 +588,11 @@ def custom_training(model, train_set, X_text_Test, X_audio_Test, X_pos_Test, X_s
 		running_loss /= total
 
 		print(f"Shapes = {X_text_Test.shape}, {X_audio_Test.shape}, {ZERO_TENSOR_TEST.shape}")
+
+		if args['components'] == 'audio':
+			X_text_Test = ZERO_TEXT_TENSOR
+		elif args['components'] == 'text':
+			X_audio_Test = ZERO_AUDIO_TENSOR
 
 		predTest = model.predict(
 				[X_text_Test, X_audio_Test, X_pos_Test, X_speak_Test, ZERO_TENSOR_TEST, ONES_TENSOR_TEST]
