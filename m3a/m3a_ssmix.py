@@ -50,6 +50,7 @@ ap.add_argument('--num_epochs', type=int, default=200, help='Number of epochs')
 ap.add_argument('--lr', type=float, default=0.001, help='Learning rate')
 ap.add_argument('--lam_inter', type=float, default=0.2)
 ap.add_argument('--type', type=str, default="parallel")
+ap.add_argument('--intra_saliency', type=bool, default=True)
 args = vars(ap.parse_args())
 
 timestamp = str(datetime.datetime.now())
@@ -404,11 +405,12 @@ def intra_mix(x1, x2, sal1, sal2, threshold, lam):
 			sample1 = x1[i, j]
 			sample2 = x2[i, j]
 
-			sample1_indices = sal1[i, j].argsort()[:int(threshold * sample1.shape[0])]
-			sample2_indices = sal2[i, j].argsort()[int(-threshold * sample2.shape[0]):]
+			if args['intra_saliency']:
+				sample1_indices = sal1[i, j].argsort()[:int(threshold * sample1.shape[0])]
+				sample2_indices = sal2[i, j].argsort()[int(-threshold * sample2.shape[0]):]
 
-			sample1[sample1_indices] = 0
-			sample2[sample2_indices] = 0
+				sample1[sample1_indices] = 0
+				sample2[sample2_indices] = 0
 			
 			mixed[i, j] = lam * sample1 + (1 - lam) * sample2
 
