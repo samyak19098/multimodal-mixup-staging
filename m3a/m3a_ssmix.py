@@ -317,8 +317,8 @@ elif args['data'] == 'ec':
 # X_speak_Test = Xspeak[testIndex]
 
 if args['data'] == 'm3a':
-    # PROCESSED_DATA_BASE = '/home/shivama2/ssmix/multimodal-mixup-staging/m3a/processed_data/'
-    PROCESSED_DATA_BASE = '/home/rajivratn/sriram/Speech-Coherence-Project/Samyak/m3a/multimodal-mixup-staging/m3a/processed_data/'
+    PROCESSED_DATA_BASE = '/home/shivama2/ssmix/multimodal-mixup-staging/m3a/processed_data/'
+    # PROCESSED_DATA_BASE = '/home/rajivratn/sriram/Speech-Coherence-Project/Samyak/m3a/multimodal-mixup-staging/m3a/processed_data/'
 elif args['data'] == 'ec':
     PROCESSED_DATA_BASE = '/home/shivama2/ssmix/multimodal-mixup-staging/m3a/EC_Dataset/EarningsCall_Data/processed_data_ec/'
 X_text_Train = np.load(PROCESSED_DATA_BASE + 'x_text_train.npy')
