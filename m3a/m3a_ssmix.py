@@ -56,7 +56,7 @@ args = vars(ap.parse_args())
 
 timestamp = str(datetime.datetime.now())
 wandb.init(
-	project='ssmix',
+	project='ssmix-final',
 	name=timestamp,
 	config=args
 )
