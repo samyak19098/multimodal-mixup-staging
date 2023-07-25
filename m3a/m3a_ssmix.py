@@ -526,10 +526,12 @@ def custom_training(model, train_set, X_text_Test, X_audio_Test, X_pos_Test, X_s
 				lam_not = args['lam_inter']
 				if args['data'] == 'm3a':
 					span_len = lam_not * 284
-					lam_inter = 1 - (lam_not * (284 / (temp2 + 1))) #adding 1 for smoothening
+					# lam_inter = 1 - (lam_not * (284 / (temp2 + 1))) #adding 1 for smoothening
+					lam_inter = lam_not
 				elif args['data'] == 'ec':
 					span_len = lam_not * 495
-					lam_inter = 1 - (lam_not * (495 / (temp2 + 1))) #adding 1 for smoothening
+					lam_inter = lam_not
+					# lam_inter = 1 - (lam_not * (495 / (temp2 + 1))) #adding 1 for smoothening
 				
     
 				audio_mixed_intra = intra_mix(audio.numpy(), audio.numpy()[permutation], saliency_audio, saliency_audio[permutation], args['threshold'], lam)
@@ -551,7 +553,7 @@ def custom_training(model, train_set, X_text_Test, X_audio_Test, X_pos_Test, X_s
 				speak_mixed_intra = tf.math.scalar_mul(lam, speak) + tf.math.scalar_mul(1 - lam, tf.gather(speak, tf.convert_to_tensor(permutation)))
 
 				label_mixed_inter = tf.multiply(tf.constant(lam_inter, dtype=tf.float32), label) + tf.multiply(tf.constant(1 - lam_inter, dtype=tf.float32), tf.gather(label, tf.convert_to_tensor(permutation)))
-				speak_mixed_inter = tf.math.scalar_mul(lam_not, speak) + tf.math.scalar_mul(1 - lam_not, tf.gather(speak, tf.convert_to_tensor(permutation)))
+				speak_mixed_inter = tf.math.scalar_mul(lam_inter, speak) + tf.math.scalar_mul(1 - lam_inter, tf.gather(speak, tf.convert_to_tensor(permutation)))
 				super_tape.watch(audio_mixed_intra)
 				super_tape.watch(text_mixed_intra)
 				# super_tape.watch(audio_mixed_inter)
