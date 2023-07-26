@@ -42,6 +42,7 @@ if gpus:
 		print(e)
 
 ap = argparse.ArgumentParser()
+ap.add_argument('--run_name', type=str)
 ap.add_argument('--data', type=str)
 ap.add_argument('--tau', type=int, default=0, help='0 for 3, 1 for 7 and 2 for 15')
 ap.add_argument('--threshold', type=float, default=0.7, help='Saliency threshold')
@@ -49,7 +50,7 @@ ap.add_argument('--threshold', type=float, default=0.7, help='Saliency threshold
 # ap.add_argument('--loss_intra_coef', type=float, default=0.15)
 # ap.add_argument('--loss_inter_coef', type=float, default=0.15)
 ap.add_argument('--bs', type=int, default=64, help='Batch size')
-ap.add_argument('--num_epochs', type=int, default=200, help='Number of epochs')
+ap.add_argument('--num_epochs', type=int, default=100, help='Number of epochs')
 ap.add_argument('--lr', type=float, default=0.001, help='Learning rate')
 ap.add_argument('--lam_inter', type=float, default=0.2)
 ap.add_argument('--type', type=str, default="parallel")
@@ -493,7 +494,7 @@ def custom_training(model, train_set, X_text_Test, X_audio_Test, X_pos_Test, X_s
 	
 	wandb.init(
 		project='ssmix',
-		name=timestamp,
+		name=str(timestamp) + '_' + args['run_name'],
 		config=args
 	)
 	
@@ -686,18 +687,22 @@ model = createModelC(
 
 
 def objective(trial):
+	global learning_rate
 	params = {
 		# "lr": trial.suggest_loguniform("lr", 1e-5, 1e-2),
 		# "threshold": trial.suggest_loguniform("threshold", 0.1, 0.8)
 		# "lam_inter": trial.suggest_loguniform("lam_inter", 0.1, 0.8)
+		"learning_rate": trial.suggest_loguniform("lr", 1e-5, 1e-3),
 		"loss_original_coef": trial.suggest_loguniform("loss_original_coef", 0.1, 1),
 		"loss_intra_coef": trial.suggest_loguniform("loss_intra_coef", 0.1, 1),
 		"loss_inter_coef": trial.suggest_loguniform("loss_inter_coef", 0.1, 1)
 	}
 
+	learning_rate = params['learning_rate']
 	args['loss_original_coef'] = params['loss_original_coef']
 	args['loss_intra_coef'] = params['loss_intra_coef']
 	args['loss_inter_coef'] = params['loss_inter_coef']
+	args['lr'] = params['learning_rate']
 	args['trial_number'] = trial.number
  
 	best_f1 = custom_training(model, train_set, X_text_Test, X_audio_Test, X_pos_Test, X_speak_Test, YTest)
@@ -706,7 +711,7 @@ def objective(trial):
 
   
 study = optuna_distributed.from_study(optuna.create_study(direction='maximize'), client=None)
-study.optimize(func=objective, n_trials=2)
+study.optimize(func=objective, n_trials=20)
 print(study.best_value)
 
 

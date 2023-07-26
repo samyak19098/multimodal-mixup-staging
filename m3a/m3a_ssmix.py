@@ -4,7 +4,6 @@ from tensorflow.keras import layers
 from tensorflow.keras.optimizers import Adam
 from tensorflow.keras.models import load_model
 from tensorflow.keras.layers import *
-import sys
 
 from tqdm.auto import tqdm
 from sklearn.metrics import *
@@ -521,20 +520,16 @@ def custom_training(model, train_set, X_text_Test, X_audio_Test, X_pos_Test, X_s
 				
 				lam = np.random.beta(0.5, 0.5)
     
-				# temp1 = np.sum(audio, axis=2)
-				# temp2 = np.count_nonzero(temp1, axis=1)
-				# print(audio.shape)
-				# print(temp1.shape)
-				# print(temp2.shape)
-				# sys.exit(0)
+				temp1 = np.sum(audio, axis=2)
+				temp2 = np.count_nonzero(temp1, axis=1)
 				# lam_not = np.random.beta(0.5, 0.5)
 				lam_not = args['lam_inter']
 				if args['data'] == 'm3a':
-					span_len = lam_not * 62
+					span_len = lam_not * 284
 					# lam_inter = 1 - (lam_not * (284 / (temp2 + 1))) #adding 1 for smoothening
 					lam_inter = lam_not
 				elif args['data'] == 'ec':
-					span_len = lam_not * 29
+					span_len = lam_not * 495
 					lam_inter = lam_not
 					# lam_inter = 1 - (lam_not * (495 / (temp2 + 1))) #adding 1 for smoothening
 				
