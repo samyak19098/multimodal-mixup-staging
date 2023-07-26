@@ -692,10 +692,12 @@ def objective(trial):
 		# "lr": trial.suggest_loguniform("lr", 1e-5, 1e-2),
 		# "threshold": trial.suggest_loguniform("threshold", 0.1, 0.8)
 		# "lam_inter": trial.suggest_loguniform("lam_inter", 0.1, 0.8)
-		"learning_rate": trial.suggest_loguniform("lr", 1e-5, 1e-3),
+		"learning_rate": trial.suggest_loguniform("lr", 1e-4, 1e-3),
 		"loss_original_coef": trial.suggest_loguniform("loss_original_coef", 0.1, 1),
 		"loss_intra_coef": trial.suggest_loguniform("loss_intra_coef", 0.1, 1),
-		"loss_inter_coef": trial.suggest_loguniform("loss_inter_coef", 0.1, 1)
+		"loss_inter_coef": trial.suggest_loguniform("loss_inter_coef", 0.1, 1),
+		"lam_inter": trial.suggest_loguniform("lam_inter", 0.2, 0.6),
+		"threshold": trial.suggest_loguniform("threshold", 0.5, 0.8)
 	}
 
 	learning_rate = params['learning_rate']
@@ -704,6 +706,9 @@ def objective(trial):
 	args['loss_inter_coef'] = params['loss_inter_coef']
 	args['lr'] = params['learning_rate']
 	args['trial_number'] = trial.number
+	args['lam_inter'] = params['lam_inter']
+	args['threshold'] = params['threshold']
+	
  
 	best_f1 = custom_training(model, train_set, X_text_Test, X_audio_Test, X_pos_Test, X_speak_Test, YTest)
 	
