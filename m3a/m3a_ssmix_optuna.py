@@ -711,7 +711,7 @@ def objective(trial):
 
   
 study = optuna.create_study(direction='maximize')
-study.optimize(func=objective, n_trials=20)
+study.optimize(func=objective, n_trials=1)
 # print(study.best_value)
 
 
