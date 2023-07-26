@@ -44,9 +44,9 @@ ap = argparse.ArgumentParser()
 ap.add_argument('--data', type=str)
 ap.add_argument('--tau', type=int, default=0, help='0 for 3, 1 for 7 and 2 for 15')
 ap.add_argument('--threshold', type=float, default=0.7, help='Saliency threshold')
-ap.add_argument('--loss_original_coef', type=float, default=0.7)
-ap.add_argument('--loss_intra_coef', type=float, default=0.15)
-ap.add_argument('--loss_inter_coef', type=float, default=0.15)
+# ap.add_argument('--loss_original_coef', type=float, default=0.7)
+# ap.add_argument('--loss_intra_coef', type=float, default=0.15)
+# ap.add_argument('--loss_inter_coef', type=float, default=0.15)
 ap.add_argument('--bs', type=int, default=64, help='Batch size')
 ap.add_argument('--num_epochs', type=int, default=200, help='Number of epochs')
 ap.add_argument('--lr', type=float, default=0.001, help='Learning rate')
@@ -60,11 +60,11 @@ ap.add_argument('--components', type=str, default='both')
 args = vars(ap.parse_args())
 
 timestamp = str(datetime.datetime.now())
-wandb.init(
-	project='ssmix',
-	name=timestamp,
-	config=args
-)
+# wandb.init(
+# 	project='ssmix',
+# 	name=timestamp,
+# 	config=args
+# )
 
 print(args)
 
@@ -489,6 +489,13 @@ def inter_mix(x1, x2, sal1, sal2, span_ratio):
 	return mixed
 
 def custom_training(model, train_set, X_text_Test, X_audio_Test, X_pos_Test, X_speak_Test, YTest):
+	
+	wandb.init(
+		project='ssmix',
+		name=timestamp,
+		config=args
+	)
+	
 	loss_fn = tf.keras.losses.BinaryCrossentropy(
 			from_logits=False,
 			name="binary_crossentropy",
@@ -633,6 +640,7 @@ def custom_training(model, train_set, X_text_Test, X_audio_Test, X_pos_Test, X_s
 		'Best F1-score': best_report['weighted avg']['f1-score'],
 		'Best MCC': best_mcc
 	})
+	wandb.finish()
 	return best_report['weighted avg']['f1-score']
 
 i = args['tau']
@@ -689,7 +697,8 @@ def objective(trial):
 	args['loss_original_coef'] = params['loss_original_coef']
 	args['loss_intra_coef'] = params['loss_intra_coef']
 	args['loss_inter_coef'] = params['loss_inter_coef']
-	
+	args['trial_number'] = trial.number
+ 
 	best_f1 = custom_training(model, train_set, X_text_Test, X_audio_Test, X_pos_Test, X_speak_Test, YTest)
 	
 	return best_f1
