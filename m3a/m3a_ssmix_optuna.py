@@ -494,7 +494,7 @@ def custom_training(model, train_set, X_text_Test, X_audio_Test, X_pos_Test, X_s
 	
 	wandb.init(
 		project='ssmix',
-		name=str(timestamp) + '_' + args['run_name'] + str(args['trial_number']),
+		name=str(timestamp) + '_' + args['run_name'] + '_' + str(args['trial_number']),
 		config=args
 	)
 	
