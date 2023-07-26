@@ -1,5 +1,5 @@
 import optuna
-import optuna_distributed
+# import optuna_distributed
 import tensorflow as tf
 from tensorflow import keras
 from tensorflow.keras import layers
@@ -710,9 +710,9 @@ def objective(trial):
 	return best_f1
 
   
-study = optuna_distributed.from_study(optuna.create_study(direction='maximize'), client=None)
+study = optuna.create_study(direction='maximize')
 study.optimize(func=objective, n_trials=20)
-print(study.best_value)
+# print(study.best_value)
 
 
 
