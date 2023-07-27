@@ -665,23 +665,7 @@ mc = tf.keras.callbacks.ModelCheckpoint(
 		modelN, monitor="val_accuracy", verbose=0, save_best_only=True
 )
 
-if args['data'] == 'm3a':
-	num_audio_feats = 62
-	num_heads = 3
-elif args['data'] == 'ec':
-	num_audio_feats = 29
-	num_heads = 4
 
-model = createModelC(
-		768,
-		num_audio_feats,
-		num_heads,
-		movement_feedforward_size,
-		movement_hidden_dim,
-		movement_dropout,
-		maxLen,
-		maxSpeaker,
-)
 
 
 
@@ -708,6 +692,24 @@ def objective(trial):
 	args['trial_number'] = trial.number
 	args['lam_inter'] = params['lam_inter']
 	args['threshold'] = params['threshold']
+
+	if args['data'] == 'm3a':
+		num_audio_feats = 62
+		num_heads = 3
+	elif args['data'] == 'ec':
+		num_audio_feats = 29
+		num_heads = 4
+
+	model = createModelC(
+			768,
+			num_audio_feats,
+			num_heads,
+			movement_feedforward_size,
+			movement_hidden_dim,
+			movement_dropout,
+			maxLen,
+			maxSpeaker,
+	)
 	
  
 	best_f1 = custom_training(model, train_set, X_text_Test, X_audio_Test, X_pos_Test, X_speak_Test, YTest)
