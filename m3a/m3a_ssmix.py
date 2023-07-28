@@ -40,6 +40,7 @@ if gpus:
 
 ap = argparse.ArgumentParser()
 ap.add_argument('--data', type=str)
+ap.add_argument('--run_name', type=str, default='run.default')
 ap.add_argument('--tau', type=int, default=0, help='0 for 3, 1 for 7 and 2 for 15')
 ap.add_argument('--threshold', type=float, default=0.7, help='Saliency threshold')
 ap.add_argument('--loss_original_coef', type=float, default=0.7)
