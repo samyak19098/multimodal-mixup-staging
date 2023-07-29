@@ -793,6 +793,7 @@ def custom_training_mdrm(model, train_set, X_text_Test, X_audio_Test, X_pos_Test
         report = classification_report(YTest, predTest, output_dict=True)
         if best_report is None:
             best_report = report
+            best_mcc = mcc
         elif best_report['weighted avg']['f1-score'] < report['weighted avg']['f1-score']:
             best_report = report
             best_mcc = mcc
