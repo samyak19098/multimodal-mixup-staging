@@ -88,7 +88,8 @@ movement_dropout = 0.0
 
 def createMdrmLstm(maxlen, input_shape, output_shape, last_layer_activation, flatten=False):
     input_data = Input(shape=(maxlen, input_shape))
-    masked = Masking(mask_value =0)(input_data)
+    # masked = Masking(mask_value =0)(input_data)
+	masked = input_data
     lstm = Bidirectional(LSTM(300, activation='tanh', return_sequences = True, dropout=0.6))(masked)
     inter = Dropout(0.9)(lstm)
     if flatten:
