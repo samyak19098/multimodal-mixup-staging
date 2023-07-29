@@ -57,6 +57,7 @@ ap.add_argument('--type', type=str, default="parallel")
 ap.add_argument('--intra_saliency', type=bool, default=True)
 ap.add_argument('--components', type=str, default='both')
 ap.add_argument('--model_name', type=str, default='m3a')
+ap.add_argument('--num_trials', type=int, default=20)
 
 
 
@@ -110,7 +111,7 @@ def createMdrm(maxlen, audio_shape, text_shape):
 
     audio_features = lstm_audio(audio)
     text_features = lstm_text(text)
-    combined_features = concatenator([audio, text])
+    combined_features = concatenator([audio_features, text_features])
     logits = lstm_combined(combined_features)
 
     model = keras.Model(inputs=[audio, text], outputs=[logits])
@@ -777,28 +778,6 @@ def custom_training_mdrm(model, train_set, X_text_Test, X_audio_Test, X_pos_Test
 
 
 def objective(trial):
-	global learning_rate
-	params = {
-		# "lr": trial.suggest_loguniform("lr", 1e-5, 1e-2),
-		# "threshold": trial.suggest_loguniform("threshold", 0.1, 0.8)
-		# "lam_inter": trial.suggest_loguniform("lam_inter", 0.1, 0.8)
-		"learning_rate": trial.suggest_loguniform("lr", 6e-4, 2e-3),
-		"loss_original_coef": trial.suggest_loguniform("loss_original_coef", 0.1, 1),
-		"loss_intra_coef": trial.suggest_loguniform("loss_intra_coef", 0.1, 1),
-		"loss_inter_coef": trial.suggest_loguniform("loss_inter_coef", 0.1, 1),
-		"lam_inter": trial.suggest_loguniform("lam_inter", 0.2, 0.6),
-		"threshold": trial.suggest_loguniform("threshold", 0.5, 0.8)
-	}
-
-	learning_rate = params['learning_rate']
-	args['loss_original_coef'] = params['loss_original_coef']
-	args['loss_intra_coef'] = params['loss_intra_coef']
-	args['loss_inter_coef'] = params['loss_inter_coef']
-	args['lr'] = params['learning_rate']
-	args['trial_number'] = trial.number
-	args['lam_inter'] = params['lam_inter']
-	args['threshold'] = params['threshold']
-
 	if args['data'] == 'm3a':
 		num_audio_feats = 62
 		num_heads = 3
@@ -807,6 +786,27 @@ def objective(trial):
 		num_heads = 4
 
 	if args['model_name'] == 'm3a':
+		global learning_rate
+		params = {
+			# "lr": trial.suggest_loguniform("lr", 1e-5, 1e-2),
+			# "threshold": trial.suggest_loguniform("threshold", 0.1, 0.8)
+			# "lam_inter": trial.suggest_loguniform("lam_inter", 0.1, 0.8)
+			"learning_rate": trial.suggest_loguniform("lr", 6e-4, 2e-3),
+			"loss_original_coef": trial.suggest_loguniform("loss_original_coef", 0.1, 1),
+			"loss_intra_coef": trial.suggest_loguniform("loss_intra_coef", 0.1, 1),
+			"loss_inter_coef": trial.suggest_loguniform("loss_inter_coef", 0.1, 1),
+			"lam_inter": trial.suggest_loguniform("lam_inter", 0.2, 0.6),
+			"threshold": trial.suggest_loguniform("threshold", 0.5, 0.8)
+		}
+
+		learning_rate = params['learning_rate']
+		args['loss_original_coef'] = params['loss_original_coef']
+		args['loss_intra_coef'] = params['loss_intra_coef']
+		args['loss_inter_coef'] = params['loss_inter_coef']
+		args['lr'] = params['learning_rate']
+		args['trial_number'] = trial.number
+		args['lam_inter'] = params['lam_inter']
+		args['threshold'] = params['threshold']
 		model = createModelC(
 				768,
 				num_audio_feats,
@@ -820,6 +820,13 @@ def objective(trial):
 
 		best_f1 = custom_training(model, train_set, X_text_Test, X_audio_Test, X_pos_Test, X_speak_Test, YTest)
 	elif args['model_name'] == 'mdrm':
+		params = {
+			# "lr": trial.suggest_loguniform("lr", 1e-5, 1e-2),
+			# "threshold": trial.suggest_loguniform("threshold", 0.1, 0.8)
+			# "lam_inter": trial.suggest_loguniform("lam_inter", 0.1, 0.8)
+			"learning_rate": trial.suggest_loguniform("lr", 6e-4, 2e-3),
+		}
+		learning_rate = params['learning_rate']
 		model = createMdrm(maxLen, num_audio_feats, 768)
 		best_f1 = custom_training_mdrm(model, train_set, X_text_Test, X_audio_Test, X_pos_Test, X_speak_Test, YTest)
 	
@@ -827,7 +834,7 @@ def objective(trial):
 
   
 study = optuna.create_study(direction='maximize')
-study.optimize(func=objective, n_trials=20)
+study.optimize(func=objective, n_trials=args['num_trials'])
 # print(study.best_value)
 
 
