@@ -8,6 +8,8 @@ from tensorflow.keras.models import load_model
 from tensorflow.keras.layers import *
 import sys
 
+from custom_models import *
+
 from tqdm.auto import tqdm
 from sklearn.metrics import *
 import pandas as pd
@@ -56,6 +58,7 @@ ap.add_argument('--lam_inter', type=float, default=0.2)
 ap.add_argument('--type', type=str, default="parallel")
 ap.add_argument('--intra_saliency', type=bool, default=True)
 ap.add_argument('--components', type=str, default='both')
+ap.add_argument('--model_name', type=str, default='m3a')
 
 
 
@@ -667,6 +670,81 @@ mc = tf.keras.callbacks.ModelCheckpoint(
 
 
 
+def custom_training_mdrm(model, train_set, X_text_Test, X_audio_Test, X_pos_Test, X_speak_Test, YTest):
+	
+	wandb.init(
+		project='trash',
+		name=str(timestamp) + '_' + args['run_name'] + '_' + str(args['trial_number']),
+		config=args
+	)
+	
+	loss_fn = tf.keras.losses.BinaryCrossentropy(
+			from_logits=False,
+			name="binary_crossentropy",
+	)
+	optimizer = tf.keras.optimizers.Adam(learning_rate=learning_rate)
+	epochs = args['num_epochs']
+	best_report = None
+	best_mcc = None
+	for epoch in range(epochs):
+		running_loss = 0
+		total = 0
+		for idx, (text, audio, pos, speak, label) in enumerate(train_set):
+			if args['components'] == 'audio':
+				text = ZERO_TEXT_TENSOR
+			elif args['components'] == 'text':
+				audio = ZERO_AUDIO_TENSOR
+			with tf.GradientTape() as super_tape:
+				with tf.GradientTape() as tape:
+					tape.watch(audio)
+					tape.watch(text)
+					logits = model(inputs=[audio, text], training=True)
+					loss_value = loss_fn(label, logits)
+
+				running_loss += loss_value * audio.shape[0]
+				total += audio.shape[0]
+			
+			grads = super_tape.gradient(loss_value, model.trainable_weights)
+			optimizer.apply_gradients(zip(grads, model.trainable_weights))
+
+			print(f"Epoch {epoch}: (iter {idx}) train_loss={float(loss_value)}")
+		
+		running_loss /= total
+
+		print(f"Shapes = {X_text_Test.shape}, {X_audio_Test.shape}, {ZERO_TENSOR_TEST.shape}")
+
+		if args['components'] == 'audio':
+			X_text_Test = ZERO_TEXT_TENSOR_TEST
+		elif args['components'] == 'text':
+			X_audio_Test = ZERO_AUDIO_TENSOR_TEST
+
+		predTest = model.predict(
+				[X_audio_Test, X_text_Test]
+		)[0].round()
+		mcc = matthews_corrcoef(YTest, predTest)
+		f1 = f1_score(YTest, predTest)
+		print("--> F1 for Testing Set for ", YPrint[i], ": ", f1)
+		print("--> MCC for Testing Set for ", YPrint[i], ": ", mcc)
+		report = classification_report(YTest, predTest, output_dict=True)
+		if best_report is None:
+			best_report = report
+		elif best_report['weighted avg']['f1-score'] < report['weighted avg']['f1-score']:
+			best_report = report
+			best_mcc = mcc
+		print(f"Weighted f1 score = {best_report['weighted avg']['f1-score']}")
+		print()
+
+		wandb.log({
+			'Total loss': running_loss,
+			'F1-score': report['weighted avg']['f1-score'],
+			'MCC': mcc
+		})
+	wandb.log({
+		'Best F1-score': best_report['weighted avg']['f1-score'],
+		'Best MCC': best_mcc
+	})
+	wandb.finish()
+	return best_report['weighted avg']['f1-score']
 
 
 
@@ -700,19 +778,22 @@ def objective(trial):
 		num_audio_feats = 29
 		num_heads = 4
 
-	model = createModelC(
-			768,
-			num_audio_feats,
-			num_heads,
-			movement_feedforward_size,
-			movement_hidden_dim,
-			movement_dropout,
-			maxLen,
-			maxSpeaker,
-	)
-	
- 
-	best_f1 = custom_training(model, train_set, X_text_Test, X_audio_Test, X_pos_Test, X_speak_Test, YTest)
+	if args['model_name'] == 'm3a':
+		model = createModelC(
+				768,
+				num_audio_feats,
+				num_heads,
+				movement_feedforward_size,
+				movement_hidden_dim,
+				movement_dropout,
+				maxLen,
+				maxSpeaker,
+		)
+
+		best_f1 = custom_training(model, train_set, X_text_Test, X_audio_Test, X_pos_Test, X_speak_Test, YTest)
+	elif args['model_name'] == 'mdrm':
+		model = createMdrm(maxLen, num_audio_feats, 768)
+		best_f1 = custom_training_mdrm(model, train_set, X_text_Test, X_audio_Test, X_pos_Test, X_speak_Test, YTest)
 	
 	return best_f1
 
