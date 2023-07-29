@@ -749,6 +749,8 @@ def custom_training_mdrm(model, train_set, X_text_Test, X_audio_Test, X_pos_Test
 		predTest = model.predict(
 				[X_audio_Test, X_text_Test]
 		)[0].round()
+		print(f'Shape of pred: {predTest.shape}')
+		print(f'Shape of actual: {YTest.shape}')
 		mcc = matthews_corrcoef(YTest, predTest)
 		f1 = f1_score(YTest, predTest)
 		print("--> F1 for Testing Set for ", YPrint[i], ": ", f1)
