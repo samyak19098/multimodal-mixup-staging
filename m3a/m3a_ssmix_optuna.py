@@ -118,6 +118,21 @@ def createMdrm(maxlen, audio_shape, text_shape):
     model = keras.Model(inputs=[audio, text], outputs=[logits])
 
     return model
+
+def createMlp(maxlen, audio_shape, text_shape):
+    audio = Input(shape=(maxlen, audio_shape))
+    text = Input(shape=(maxlen, text_shape))
+
+    mean_audio = layers.GlobalAveragePooling1D()(audio)
+    mean_text = layers.GlobalAveragePooling1D()(text)
+
+    concatenated = Concatenate()([mean_audio, mean_text])
+    intermediate = Dense((audio_shape + text_shape) // 2, activation='relu')
+    output = Dense(1, activation='sigmoid')
+
+    model = keras.Model(inputs=[audio, text], outputs=[output])
+    return model
+
 class MultiHeadSelfAttention(layers.Layer):
         def __init__(self, embed_dim, num_heads=8, **kwargs):
                 super(MultiHeadSelfAttention, self).__init__(**kwargs)
@@ -831,6 +846,19 @@ def objective(trial):
         model = createMdrm(maxLen, num_audio_feats, 768)
         best_f1 = custom_training_mdrm(model, train_set, X_text_Test, X_audio_Test, X_pos_Test, X_speak_Test, YTest)
     
+    elif args['model_name'] == 'mlp':
+        params = {
+            # "lr": trial.suggest_loguniform("lr", 1e-5, 1e-2),
+            # "threshold": trial.suggest_loguniform("threshold", 0.1, 0.8)
+            # "lam_inter": trial.suggest_loguniform("lam_inter", 0.1, 0.8)
+            "learning_rate": trial.suggest_loguniform("lr", 6e-4, 2e-3),
+        }
+        learning_rate = params['learning_rate']
+        args['trial_number'] = trial.number
+        args['lr'] = params['learning_rate']
+        model = createMlp(maxLen, num_audio_feats, 768)
+        best_f1 = custom_training_mdrm(model, train_set, X_text_Test, X_audio_Test, X_pos_Test, X_speak_Test, YTest)
+
     return best_f1
 
   
