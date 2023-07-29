@@ -95,7 +95,7 @@ def createMdrmLstm(maxlen, input_shape, output_shape, last_layer_activation, fla
         inter1 = Dense(output_shape, activation=last_layer_activation)(flattened)
     else:
         inter1 = TimeDistributed(Dense(output_shape,activation=last_layer_activation))(inter)
-    model = Model(input_data, inter1)
+    model = keras.Model(input_data, inter1)
 
     return model
 
@@ -113,7 +113,7 @@ def createMdrm(maxlen, audio_shape, text_shape):
     combined_features = concatenator([audio, text])
     logits = lstm_combined(combined_features)
 
-    model = Model(inputs=[audio, text], outputs=[logits])
+    model = keras.Model(inputs=[audio, text], outputs=[logits])
 
     return model
 class MultiHeadSelfAttention(layers.Layer):
