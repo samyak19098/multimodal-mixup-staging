@@ -127,8 +127,8 @@ def createMlp(maxlen, audio_shape, text_shape):
     mean_text = layers.GlobalAveragePooling1D()(text)
 
     concatenated = Concatenate()([mean_audio, mean_text])
-    intermediate = Dense((audio_shape + text_shape) // 2, activation='relu')
-    output = Dense(1, activation='sigmoid')
+    intermediate = Dense((audio_shape + text_shape) // 2, activation='relu')(concatenated)
+    output = Dense(1, activation='sigmoid')(intermediate)
 
     model = keras.Model(inputs=[audio, text], outputs=[output])
     return model
