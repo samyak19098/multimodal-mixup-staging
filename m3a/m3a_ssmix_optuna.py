@@ -88,8 +88,7 @@ movement_dropout = 0.0
 
 def createMdrmLstm(maxlen, input_shape, output_shape, last_layer_activation, flatten=False):
     input_data = Input(shape=(maxlen, input_shape))
-    # masked = Masking(mask_value =0)(input_data)
-    masked = input_data
+    masked = Masking(mask_value=0)(input_data)
     lstm = Bidirectional(LSTM(300, activation='tanh', return_sequences = True, dropout=0.6))(masked)
     inter = Dropout(0.9)(lstm)
     if flatten:
@@ -129,6 +128,28 @@ def createMlp(maxlen, audio_shape, text_shape):
     concatenated = Concatenate()([mean_audio, mean_text])
     intermediate = Dense((audio_shape + text_shape) // 2, activation='relu')(concatenated)
     output = Dense(1, activation='sigmoid')(intermediate)
+
+    model = keras.Model(inputs=[audio, text], outputs=[output])
+    return model
+
+def createLstm(maxlen, audio_shape, text_shape):
+    audio = Input(shape=(maxlen, audio_shape))
+    text = Input(shape=(maxlen, text_shape))
+
+    mask_audio = Masking(mask_value=0)(audio)
+    mask_text = Masking(mask_value=0)(text)
+    
+    lstm_audio = LSTM(300, activation='tanh', return_sequences = True, dropout=0.6)
+    lstm_text = LSTM(300, activation='tanh', return_sequences = True, dropout=0.6)
+
+    audio_lstm_output = lstm_audio(mask_audio)
+    text_lstm_output = lstm_text(mask_text)
+
+    mean_audio = layers.GlobalAveragePooling1D()(audio_lstm_output)
+    mean_text = layers.GlobalAveragePooling1D()(text_lstm_output)
+
+    combined = Concatenate(axis=2)([mean_audio, mean_text])
+    output = Dense(1, activation='sigmoid')(combined)
 
     model = keras.Model(inputs=[audio, text], outputs=[output])
     return model
@@ -857,6 +878,19 @@ def objective(trial):
         args['trial_number'] = trial.number
         args['lr'] = params['learning_rate']
         model = createMlp(maxLen, num_audio_feats, 768)
+        best_f1 = custom_training_mdrm(model, train_set, X_text_Test, X_audio_Test, X_pos_Test, X_speak_Test, YTest)
+    
+    elif args['model_name'] == 'lstm':
+        params = {
+            # "lr": trial.suggest_loguniform("lr", 1e-5, 1e-2),
+            # "threshold": trial.suggest_loguniform("threshold", 0.1, 0.8)
+            # "lam_inter": trial.suggest_loguniform("lam_inter", 0.1, 0.8)
+            "learning_rate": trial.suggest_loguniform("lr", 6e-4, 2e-3),
+        }
+        learning_rate = params['learning_rate']
+        args['trial_number'] = trial.number
+        args['lr'] = params['learning_rate']
+        model = createLstm(maxLen, num_audio_feats, 768)
         best_f1 = custom_training_mdrm(model, train_set, X_text_Test, X_audio_Test, X_pos_Test, X_speak_Test, YTest)
 
     return best_f1
