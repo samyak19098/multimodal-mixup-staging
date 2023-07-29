@@ -104,10 +104,10 @@ def createMdrm(maxlen, audio_shape, text_shape):
     audio = Input(shape=(maxlen, audio_shape))
     text = Input(shape=(maxlen, text_shape))
 
-    lstm_audio = createMdrmLstm(maxlen, audio_shape, 100, 'tanh')
-    lstm_text = createMdrmLstm(maxlen, text_shape, 100, 'tanh')
+    lstm_audio = createMdrmLstm(maxlen, audio_shape, 32, 'tanh')
+    lstm_text = createMdrmLstm(maxlen, text_shape, 32, 'tanh')
     concatenator = Concatenate(axis=2)
-    lstm_combined = createMdrmLstm(maxlen, 200, 1, 'sigmoid', flatten=True)
+    lstm_combined = createMdrmLstm(maxlen, 64, 1, 'sigmoid', flatten=True)
 
     audio_features = lstm_audio(audio)
     text_features = lstm_text(text)
