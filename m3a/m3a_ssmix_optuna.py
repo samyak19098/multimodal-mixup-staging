@@ -873,7 +873,7 @@ def objective(trial):
             # "lr": trial.suggest_loguniform("lr", 1e-5, 1e-2),
             # "threshold": trial.suggest_loguniform("threshold", 0.1, 0.8)
             # "lam_inter": trial.suggest_loguniform("lam_inter", 0.1, 0.8)
-            "learning_rate": trial.suggest_loguniform("lr", 6e-4, 2e-3),
+            "learning_rate": trial.suggest_loguniform("lr", 1e-3, 2e-3),
         }
         learning_rate = params['learning_rate']
         args['trial_number'] = trial.number
@@ -886,7 +886,7 @@ def objective(trial):
             # "lr": trial.suggest_loguniform("lr", 1e-5, 1e-2),
             # "threshold": trial.suggest_loguniform("threshold", 0.1, 0.8)
             # "lam_inter": trial.suggest_loguniform("lam_inter", 0.1, 0.8)
-            "learning_rate": trial.suggest_loguniform("lr", 1e-3, 2e-3),
+            "learning_rate": trial.suggest_loguniform("lr", 6e-4, 2e-3),
         }
         learning_rate = params['learning_rate']
         args['trial_number'] = trial.number
