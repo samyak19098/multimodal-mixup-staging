@@ -826,6 +826,7 @@ def objective(trial):
 		}
 		learning_rate = params['learning_rate']
 		args['trial_number'] = trial.number
+		args['lr'] = params['learning_rate']
 		model = createMdrm(maxLen, num_audio_feats, 768)
 		best_f1 = custom_training_mdrm(model, train_set, X_text_Test, X_audio_Test, X_pos_Test, X_speak_Test, YTest)
 	
