@@ -777,6 +777,7 @@ def custom_training_mdrm(model, train_set, X_text_Test, X_audio_Test, X_pos_Test
 
 
 def objective(trial):
+	global learning_rate
 	if args['data'] == 'm3a':
 		num_audio_feats = 62
 		num_heads = 3
@@ -785,7 +786,6 @@ def objective(trial):
 		num_heads = 4
 
 	if args['model_name'] == 'm3a':
-		global learning_rate
 		params = {
 			# "lr": trial.suggest_loguniform("lr", 1e-5, 1e-2),
 			# "threshold": trial.suggest_loguniform("threshold", 0.1, 0.8)
