@@ -148,7 +148,7 @@ def createLstm(maxlen, audio_shape, text_shape):
     mean_audio = layers.GlobalAveragePooling1D()(audio_lstm_output)
     mean_text = layers.GlobalAveragePooling1D()(text_lstm_output)
 
-    combined = Concatenate(axis=2)([mean_audio, mean_text])
+    combined = Concatenate(axis=1)([mean_audio, mean_text])
     output = Dense(1, activation='sigmoid')(combined)
 
     model = keras.Model(inputs=[audio, text], outputs=[output])
