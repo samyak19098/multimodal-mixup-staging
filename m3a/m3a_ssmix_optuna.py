@@ -804,7 +804,6 @@ def objective(trial):
 		args['loss_intra_coef'] = params['loss_intra_coef']
 		args['loss_inter_coef'] = params['loss_inter_coef']
 		args['lr'] = params['learning_rate']
-		args['trial_number'] = trial.number
 		args['lam_inter'] = params['lam_inter']
 		args['threshold'] = params['threshold']
 		model = createModelC(
@@ -827,6 +826,7 @@ def objective(trial):
 			"learning_rate": trial.suggest_loguniform("lr", 6e-4, 2e-3),
 		}
 		learning_rate = params['learning_rate']
+		args['trial_number'] = trial.number
 		model = createMdrm(maxLen, num_audio_feats, 768)
 		best_f1 = custom_training_mdrm(model, train_set, X_text_Test, X_audio_Test, X_pos_Test, X_speak_Test, YTest)
 	
