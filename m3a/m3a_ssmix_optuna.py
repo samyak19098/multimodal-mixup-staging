@@ -739,7 +739,7 @@ mc = tf.keras.callbacks.ModelCheckpoint(
 def custom_training_mdrm(model, train_set, X_text_Test, X_audio_Test, X_pos_Test, X_speak_Test, YTest):
     
     wandb.init(
-        project='trash',
+        project='ssmix',
         name=str(timestamp) + '_' + args['run_name'] + '_' + str(args['trial_number']),
         config=args
     )
