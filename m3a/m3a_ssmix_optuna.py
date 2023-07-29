@@ -724,14 +724,13 @@ def custom_training_mdrm(model, train_set, X_text_Test, X_audio_Test, X_pos_Test
 			elif args['components'] == 'text':
 				audio = ZERO_AUDIO_TENSOR
 			with tf.GradientTape() as super_tape:
-				with tf.GradientTape() as tape:
-					tape.watch(audio)
-					tape.watch(text)
-					logits = model(inputs=[audio, text], training=True)
-					loss_value = loss_fn(label, logits)
+				super_tape.watch(audio)
+				super_tape.watch(text)
+				logits = model(inputs=[audio, text], training=True)
+				loss_value = loss_fn(label, logits)
 
-				running_loss += loss_value * audio.shape[0]
-				total += audio.shape[0]
+			running_loss += loss_value * audio.shape[0]
+			total += audio.shape[0]
 			
 			grads = super_tape.gradient(loss_value, model.trainable_weights)
 			optimizer.apply_gradients(zip(grads, model.trainable_weights))
