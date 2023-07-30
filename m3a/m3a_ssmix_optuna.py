@@ -843,6 +843,7 @@ def objective(trial):
         args['lr'] = params['learning_rate']
         args['lam_inter'] = params['lam_inter']
         args['threshold'] = params['threshold']
+        args['trial_number'] = trial.number
         model = createModelC(
                 768,
                 num_audio_feats,
