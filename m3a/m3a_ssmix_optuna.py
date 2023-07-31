@@ -932,7 +932,7 @@ if args['grid_search'] == 1:
             "threshold": [0.58, 0.74, 0.9]
         }
     study = optuna.create_study(sampler=optuna.samplers.GridSampler(search_space), direction='maximize')
-    study.optimize(func=objective, n_trials=6*6)
+    study.optimize(func=objective, n_trials=3*3)
 else:
     study = optuna.create_study(direction='maximize')
     study.optimize(func=objective, n_trials=args['num_trials'])
