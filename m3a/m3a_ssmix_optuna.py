@@ -58,8 +58,7 @@ ap.add_argument('--intra_saliency', type=bool, default=True)
 ap.add_argument('--components', type=str, default='both')
 ap.add_argument('--model_name', type=str, default='m3a')
 ap.add_argument('--num_trials', type=int, default=20)
-
-
+ap.add_argument('--grid_search', type=int, default=0)
 
 args = vars(ap.parse_args())
 
@@ -824,17 +823,27 @@ def objective(trial):
         num_heads = 4
 
     if args['model_name'] == 'm3a':
-        params = {
-            # "lr": trial.suggest_loguniform("lr", 1e-5, 1e-2),
-            # "threshold": trial.suggest_loguniform("threshold", 0.1, 0.8)
-            # "lam_inter": trial.suggest_loguniform("lam_inter", 0.1, 0.8)
-            "learning_rate": trial.suggest_loguniform("lr", 6e-4, 2e-3),
-            "loss_original_coef": trial.suggest_loguniform("loss_original_coef", 0.1, 1),
-            "loss_intra_coef": trial.suggest_loguniform("loss_intra_coef", 0.1, 1),
-            "loss_inter_coef": trial.suggest_loguniform("loss_inter_coef", 0.1, 1),
-            "lam_inter": trial.suggest_loguniform("lam_inter", 0.2, 0.6),
-            "threshold": trial.suggest_loguniform("threshold", 0.5, 0.8)
-        }
+        
+        if args['grid_search'] == 1:
+            # params = {
+            #     "lam_inter": [0.1 , 0.26, 0.42, 0.58, 0.74, 0.9],
+            #     "threshold": [0.1 , 0.26, 0.42, 0.58, 0.74, 0.9]
+            # }
+            
+            args['lam_inter'] = trial.suggest_uniform('lam_inter', 0, 1)
+            args['threshold'] = trial.suggest_uniform('threshold', 0, 1)
+        else:
+            params = {
+                # "lr": trial.suggest_loguniform("lr", 1e-5, 1e-2),
+                # "threshold": trial.suggest_loguniform("threshold", 0.1, 0.8)
+                # "lam_inter": trial.suggest_loguniform("lam_inter", 0.1, 0.8)
+                "learning_rate": trial.suggest_loguniform("lr", 6e-4, 2e-3),
+                "loss_original_coef": trial.suggest_loguniform("loss_original_coef", 0.1, 1),
+                "loss_intra_coef": trial.suggest_loguniform("loss_intra_coef", 0.1, 1),
+                "loss_inter_coef": trial.suggest_loguniform("loss_inter_coef", 0.1, 1),
+                "lam_inter": trial.suggest_loguniform("lam_inter", 0.2, 0.6),
+                "threshold": trial.suggest_loguniform("threshold", 0.5, 0.8)
+            }
 
         learning_rate = params['learning_rate']
         args['loss_original_coef'] = params['loss_original_coef']
@@ -897,9 +906,17 @@ def objective(trial):
 
     return best_f1
 
-  
-study = optuna.create_study(direction='maximize')
-study.optimize(func=objective, n_trials=args['num_trials'])
+
+if args['grid_search'] == 1:
+    search_space = {
+        "lam_inter": [0.1 , 0.26, 0.42, 0.58, 0.74, 0.9],
+        "threshold": [0.1 , 0.26, 0.42, 0.58, 0.74, 0.9]
+    }
+    study = optuna.create_study(sampler=optuna.samplers.GridSampler(search_space), direction='maximize')
+    study.optimize(func=objective, n_trials=6*6)
+else:
+    study = optuna.create_study(direction='maximize')
+    study.optimize(func=objective, n_trials=args['num_trials'])
 # print(study.best_value)
 
 
