@@ -846,13 +846,14 @@ def objective(trial):
                 "threshold": trial.suggest_loguniform("threshold", 0.5, 0.8)
             }
 
-        learning_rate = params['learning_rate']
-        args['loss_original_coef'] = params['loss_original_coef']
-        args['loss_intra_coef'] = params['loss_intra_coef']
-        args['loss_inter_coef'] = params['loss_inter_coef']
-        args['lr'] = params['learning_rate']
-        args['lam_inter'] = params['lam_inter']
-        args['threshold'] = params['threshold']
+            learning_rate = params['learning_rate']
+            args['loss_original_coef'] = params['loss_original_coef']
+            args['loss_intra_coef'] = params['loss_intra_coef']
+            args['loss_inter_coef'] = params['loss_inter_coef']
+            args['lr'] = params['learning_rate']
+            args['lam_inter'] = params['lam_inter']
+            args['threshold'] = params['threshold'] 
+               
         args['trial_number'] = trial.number
         model = createModelC(
                 768,
