@@ -59,6 +59,7 @@ ap.add_argument('--components', type=str, default='both')
 ap.add_argument('--model_name', type=str, default='m3a')
 ap.add_argument('--num_trials', type=int, default=20)
 ap.add_argument('--grid_search', type=int, default=0)
+ap.add_argument('--region_name', type=str, default="none")
 
 args = vars(ap.parse_args())
 
@@ -908,10 +909,27 @@ def objective(trial):
 
 
 if args['grid_search'] == 1:
-    search_space = {
-        "lam_inter": [0.1 , 0.26, 0.42, 0.58, 0.74, 0.9],
-        "threshold": [0.1 , 0.26, 0.42, 0.58, 0.74, 0.9]
-    }
+    print("\n\n ------------------ Performing Grid Search on lam_inter and threshold ------------------\n\n")
+    if args['region_name'] == 'A':
+        search_space = {
+            "lam_inter": [0.1 , 0.26, 0.42],
+            "threshold": [0.1 , 0.26, 0.42]
+        }
+    elif args['region_name'] == 'B':
+        search_space = {
+            "lam_inter": [0.1 , 0.26, 0.42],
+            "threshold": [0.58, 0.74, 0.9]
+        }
+    elif args['region_name'] == 'C':
+        search_space = {
+            "lam_inter": [0.58, 0.74, 0.9],
+            "threshold": [0.1 , 0.26, 0.42]
+        }
+    elif args['region_name'] == 'D':
+        search_space = {
+            "lam_inter": [0.58, 0.74, 0.9],
+            "threshold": [0.58, 0.74, 0.9]
+        }
     study = optuna.create_study(sampler=optuna.samplers.GridSampler(search_space), direction='maximize')
     study.optimize(func=objective, n_trials=6*6)
 else:
