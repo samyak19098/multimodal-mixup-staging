@@ -663,6 +663,7 @@ if args['tune_coefs'] != 1:
     if args['data'] == 'mustard':
         num_audio_feats = 81
         num_heads = 3
+    args['trial_number'] = 'none'
     model = createModelC(
             300,
             num_audio_feats,
