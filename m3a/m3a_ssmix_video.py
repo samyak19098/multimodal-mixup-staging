@@ -623,6 +623,7 @@ def objective(trial):
     model = createModelC(
             768,
             num_audio_feats,
+            371,
             num_heads,
             movement_feedforward_size,
             movement_hidden_dim,
