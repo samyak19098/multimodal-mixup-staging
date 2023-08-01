@@ -839,17 +839,17 @@ def objective(trial):
                 # "threshold": trial.suggest_loguniform("threshold", 0.1, 0.8)
                 # "lam_inter": trial.suggest_loguniform("lam_inter", 0.1, 0.8)
                 "learning_rate": trial.suggest_loguniform("lr", 6e-4, 2e-3),
-                "loss_original_coef": trial.suggest_loguniform("loss_original_coef", 0.1, 1),
-                "loss_intra_coef": trial.suggest_loguniform("loss_intra_coef", 0.1, 1),
-                "loss_inter_coef": trial.suggest_loguniform("loss_inter_coef", 0.1, 1),
+                # "loss_original_coef": trial.suggest_loguniform("loss_original_coef", 0.1, 1),
+                # "loss_intra_coef": trial.suggest_loguniform("loss_intra_coef", 0.1, 1),
+                # "loss_inter_coef": trial.suggest_loguniform("loss_inter_coef", 0.1, 1),
                 "lam_inter": trial.suggest_loguniform("lam_inter", 0.2, 0.6),
                 "threshold": trial.suggest_loguniform("threshold", 0.5, 0.8)
             }
 
             learning_rate = params['learning_rate']
-            args['loss_original_coef'] = params['loss_original_coef']
-            args['loss_intra_coef'] = params['loss_intra_coef']
-            args['loss_inter_coef'] = params['loss_inter_coef']
+            # args['loss_original_coef'] = params['loss_original_coef']
+            # args['loss_intra_coef'] = params['loss_intra_coef']
+            # args['loss_inter_coef'] = params['loss_inter_coef']
             args['lr'] = params['learning_rate']
             args['lam_inter'] = params['lam_inter']
             args['threshold'] = params['threshold'] 
