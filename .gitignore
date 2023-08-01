@@ -7,3 +7,4 @@ yfinance-data/
 EarningsCall_Data/
 ec_data.zip
 *.ipynb
+mustard/
