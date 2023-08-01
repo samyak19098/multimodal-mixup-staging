@@ -628,23 +628,20 @@ def objective(trial):
         # "threshold": trial.suggest_loguniform("threshold", 0.1, 0.8)
         # "lam_inter": trial.suggest_loguniform("lam_inter", 0.1, 0.8)
         "learning_rate": trial.suggest_loguniform("lr", 6e-4, 2e-3),
+        "loss_original_coef": trial.suggest_loguniform("loss_original_coef", 0.1, 1),
+        "loss_intra_coef": trial.suggest_loguniform("loss_intra_coef", 0.1, 1),
+        "loss_inter_coef": trial.suggest_loguniform("loss_inter_coef", 0.1, 1),
+        "lam_inter": trial.suggest_loguniform("lam_inter", 0.2, 0.6),
+        "threshold": trial.suggest_loguniform("threshold", 0.5, 0.8)
     }
 
     learning_rate = params['learning_rate']
-    if args['tune_coefs'] == 1:
-        params["loss_original_coef"] = trial.suggest_loguniform("loss_original_coef", 0.1, 1)
-        params["loss_intra_coef"] = trial.suggest_loguniform("loss_intra_coef", 0.1, 1)
-        params["loss_inter_coef"] = trial.suggest_loguniform("loss_inter_coef", 0.1, 1)
-        params["lam_inter"] = trial.suggest_loguniform("lam_inter", 0.2, 0.6)
-        params["threshold"] = trial.suggest_loguniform("threshold", 0.5, 0.8)
-
-        args['loss_original_coef'] = params['loss_original_coef']
-        args['loss_intra_coef'] = params['loss_intra_coef']
-        args['loss_inter_coef'] = params['loss_inter_coef']
-        args['lam_inter'] = params['lam_inter']
-        args['threshold'] = params['threshold'] 
-    
+    args['loss_original_coef'] = params['loss_original_coef']
+    args['loss_intra_coef'] = params['loss_intra_coef']
+    args['loss_inter_coef'] = params['loss_inter_coef']
     args['lr'] = params['learning_rate']
+    args['lam_inter'] = params['lam_inter']
+    args['threshold'] = params['threshold'] 
             
     args['trial_number'] = trial.number
     model = createModelC(
@@ -662,6 +659,24 @@ def objective(trial):
 
     return best_f1
 
+if args['tune_coefs'] != 1:
+    if args['data'] == 'mustard':
+        num_audio_feats = 81
+        num_heads = 3
+    model = createModelC(
+            300,
+            num_audio_feats,
+            371,
+            num_heads,
+            movement_feedforward_size,
+            movement_hidden_dim,
+            movement_dropout,
+            maxLen
+    )
+
+    best_f1 = custom_training(model, train_set, X_text_Test, X_audio_Test, X_video_Test, X_pos_Test, YTest)
+    import sys
+    sys.exit()
 
 if args['grid_search'] == 1:
     print("\n\n ------------------ Performing Grid Search on lam_inter and threshold ------------------\n\n")
