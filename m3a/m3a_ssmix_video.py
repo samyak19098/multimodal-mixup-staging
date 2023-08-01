@@ -319,6 +319,7 @@ def createModelC(emd1, emd2, emd3, heads, dimFF, dimH, drop, maxlen):
         text = Input(shape=(maxlen, embed_dim1))
         audio = Input(shape=(maxlen, embed_dim2))
         video = Input(shape=(maxlen, embed_dim3))
+        pos = Input(shape=(maxlen, embed_dim2))
 
         if args['data'] == 'mustard':
             fused_passed = Input(shape=(maxlen, 81))
@@ -356,7 +357,7 @@ def createModelC(emd1, emd2, emd3, heads, dimFF, dimH, drop, maxlen):
         x = layers.Dropout(dropout)(x)
         outputs = layers.Dense(1, activation="sigmoid")(x)
 
-        model = keras.Model(inputs=[text, audio, video, fused_passed, weights], outputs=[outputs, fused])
+        model = keras.Model(inputs=[text, audio, video, pos, fused_passed, weights], outputs=[outputs, fused])
         return model
 
 
@@ -369,6 +370,28 @@ X_audio_Train = np.load(PROCESSED_DATA_BASE + 'x_audio_train.npy', allow_pickle=
 X_audio_Test = np.load(PROCESSED_DATA_BASE + 'x_audio_test.npy', allow_pickle=True).astype(np.float64)
 X_video_Train = np.load(PROCESSED_DATA_BASE + 'x_video_train.npy', allow_pickle=True).astype(np.float64)
 X_video_Test = np.load(PROCESSED_DATA_BASE + 'x_video_test.npy', allow_pickle=True).astype(np.float64)
+
+X_pos_Train = np.zeros(X_audio_Train.shape)
+for i in tqdm(range(len(X_audio_Train))):
+                for j in range(len(X_audio_Train[i])):
+                                for d in range(len(X_audio_Train[i][j])):
+                                                if d % 2 == 0:
+                                                                p = math.sin(j / pow(10000, d / 62))
+                                                                X_pos_Train[i][j][d] = p
+                                                else:
+                                                                p = math.cos(j / pow(10000, (d - 1) / 62))
+                                                                X_pos_Train[i][j][d] = p
+
+X_pos_Test = np.zeros(X_audio_Test.shape)
+for i in tqdm(range(len(X_audio_Test))):
+                for j in range(len(X_audio_Test[i])):
+                                for d in range(len(X_audio_Test[i][j])):
+                                                if d % 2 == 0:
+                                                                p = math.sin(j / pow(10000, d / 62))
+                                                                X_pos_Test[i][j][d] = p
+                                                else:
+                                                                p = math.cos(j / pow(10000, (d - 1) / 62))
+                                                                X_pos_Test[i][j][d] = p
 
 print("TRAIN : ", X_text_Train.shape, X_audio_Train.shape, X_video_Train.shape)
 print("TEST : ", X_text_Test.shape, X_audio_Test.shape, X_video_Test.shape)
@@ -452,7 +475,7 @@ def inter_mix(x1, x2, sal1, sal2, span_ratio):
 
     return mixed
 
-def custom_training(model, train_set, X_text_Test, X_audio_Test, X_video_Test, YTest):
+def custom_training(model, train_set, X_text_Test, X_audio_Test, X_video_Test, X_pos_Test, YTest):
     
     wandb.init(
         project='ssmix',
@@ -471,13 +494,13 @@ def custom_training(model, train_set, X_text_Test, X_audio_Test, X_video_Test, Y
     for epoch in range(epochs):
         running_loss, running_loss_1, running_loss_2_intra, running_loss_2_inter = 0, 0, 0, 0
         total = 0
-        for idx, (text, audio, video, label) in enumerate(train_set):
+        for idx, (text, audio, video, pos, label) in enumerate(train_set):
             with tf.GradientTape() as super_tape:
                 with tf.GradientTape(persistent=True) as tape:
                     tape.watch(audio)
                     tape.watch(text)
                     tape.watch(video)
-                    logits, fused = model(inputs=[text, audio, video, ZERO_TENSOR, ONES_TENSOR], training=True)
+                    logits, fused = model(inputs=[text, audio, video, pos, ZERO_TENSOR, ONES_TENSOR], training=True)
                     loss_value_1 = loss_fn(label, logits)
 
                 grads_audio = tape.gradient(loss_value_1, audio)
@@ -524,9 +547,9 @@ def custom_training(model, train_set, X_text_Test, X_audio_Test, X_video_Test, Y
                 super_tape.watch(fused_mixed_inter)			
 
                 
-                logits_intra, _ = model(inputs=[text_mixed_intra, audio_mixed_intra, video_mixed_intra, ZERO_TENSOR, ONES_TENSOR], training=True)
+                logits_intra, _ = model(inputs=[text_mixed_intra, audio_mixed_intra, video_mixed_intra, pos, ZERO_TENSOR, ONES_TENSOR], training=True)
                 loss_value_2_intra = loss_fn(label_mixed_intra, logits_intra)
-                logits_inter, _ = model(inputs=[text_mixed_intra, audio_mixed_intra, video_mixed_intra, fused_mixed_inter, ZERO_TENSOR], training=True)
+                logits_inter, _ = model(inputs=[text_mixed_intra, audio_mixed_intra, video_mixed_intra, pos, fused_mixed_inter, ZERO_TENSOR], training=True)
                 loss_value_2_inter = loss_fn(label_mixed_inter, logits_inter)
     
                 loss_value = args['loss_original_coef'] * loss_value_1 + args['loss_intra_coef'] * loss_value_2_intra + args['loss_inter_coef'] * loss_value_2_inter
@@ -551,7 +574,7 @@ def custom_training(model, train_set, X_text_Test, X_audio_Test, X_video_Test, Y
         print(f"Shapes = {X_text_Test.shape}, {X_audio_Test.shape}, {ZERO_TENSOR_TEST.shape}")
 
         predTest = model.predict(
-                [X_text_Test, X_audio_Test, X_video_Test, ZERO_TENSOR_TEST, ONES_TENSOR_TEST]
+                [X_text_Test, X_audio_Test, X_video_Test, X_pos_Test, ZERO_TENSOR_TEST, ONES_TENSOR_TEST]
         )[0].round()
         mcc = matthews_corrcoef(YTest, predTest)
         f1 = f1_score(YTest, predTest)
@@ -582,11 +605,11 @@ def custom_training(model, train_set, X_text_Test, X_audio_Test, X_video_Test, Y
     return best_report['weighted avg']['f1-score']
 
 train_set = tf.data.Dataset.from_tensor_slices(
-        (X_text_Train, X_audio_Train, X_video_Train, YTrain)
+        (X_text_Train, X_audio_Train, X_video_Train, X_pos_Train, YTrain)
 )
 train_set = train_set.batch(batch_size=batch_size, drop_remainder=True)
 test_set = tf.data.Dataset.from_tensor_slices(
-        (X_text_Test, X_audio_Test, X_video_Test, YTest)
+        (X_text_Test, X_audio_Test, X_video_Test, X_pos_Test, YTest)
 )
 
 print(f"shapes: Y_train = {YTrain.shape}, YTest = {YTest.shape}")
@@ -631,7 +654,7 @@ def objective(trial):
             maxLen
     )
 
-    best_f1 = custom_training(model, train_set, X_text_Test, X_audio_Test, X_video_Test, YTest)
+    best_f1 = custom_training(model, train_set, X_text_Test, X_audio_Test, X_video_Test, X_pos_Test, YTest)
 
     return best_f1
 
