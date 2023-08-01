@@ -644,7 +644,7 @@ def objective(trial):
             
     args['trial_number'] = trial.number
     model = createModelC(
-            768,
+            300,
             num_audio_feats,
             371,
             num_heads,
