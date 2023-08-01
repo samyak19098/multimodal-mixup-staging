@@ -620,7 +620,7 @@ def objective(trial):
     global learning_rate
     if args['data'] == 'mustard':
         num_audio_feats = 81
-        num_heads = 2
+        num_heads = 3
 
     params = {
         # "lr": trial.suggest_loguniform("lr", 1e-5, 1e-2),
