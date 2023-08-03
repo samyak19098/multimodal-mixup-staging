@@ -429,16 +429,16 @@ if args['data'] == 'mosi':
     maxLen = 50
     ZERO_TENSOR = tf.zeros([args['bs'], maxLen, 5])
     ONES_TENSOR = tf.ones([args['bs'], maxLen, 5])
-    ZERO_TENSOR_TEST = tf.zeros([138, maxLen, 5])
-    ONES_TENSOR_TEST = tf.ones([138, maxLen, 5])
+    ZERO_TENSOR_TEST = tf.zeros([686, maxLen, 5])
+    ONES_TENSOR_TEST = tf.ones([686, maxLen, 5])
 
     ZERO_AUDIO_TENSOR = tf.zeros([args['bs'], maxLen, 5])
     ZERO_TEXT_TENSOR = tf.zeros([args['bs'], maxLen, 300])
     ZERO_VIDEO_TENSOR = tf.zeros([args['bs'], maxLen, 20])
 
-    ZERO_AUDIO_TENSOR_TEST = tf.zeros([138, maxLen, 5])
-    ZERO_TEXT_TENSOR_TEST = tf.zeros([138, maxLen, 300])
-    ZERO_VIDEO_TENSOR_TEST = tf.zeros([138, maxLen, 20])
+    ZERO_AUDIO_TENSOR_TEST = tf.zeros([686, maxLen, 5])
+    ZERO_TEXT_TENSOR_TEST = tf.zeros([686, maxLen, 300])
+    ZERO_VIDEO_TENSOR_TEST = tf.zeros([686, maxLen, 20])
     
 
 if args['data'] in ['mustard', 'mosi']:
