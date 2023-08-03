@@ -682,7 +682,7 @@ def objective(trial):
     model = createModelC(
             300,
             num_audio_feats,
-            num_vision_feats
+            num_vision_feats,
             num_heads,
             movement_feedforward_size,
             movement_hidden_dim,
