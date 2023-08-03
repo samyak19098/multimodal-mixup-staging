@@ -657,6 +657,7 @@ def objective(trial):
     if args['data'] == 'mosi':
         num_audio_feats = 5
         num_vision_feats = 20
+        num_heads = 5
 
     params = {
         # "lr": trial.suggest_loguniform("lr", 1e-5, 1e-2),
@@ -702,6 +703,7 @@ if args['tune_coefs'] != 1:
     if args['data'] == 'mosi':
         num_audio_feats = 5
         num_vision_feats = 20
+        num_heads = 5
     args['trial_number'] = 'none'
     model = createModelC(
             300,
