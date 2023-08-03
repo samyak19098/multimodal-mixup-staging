@@ -325,6 +325,10 @@ def createModelC(emd1, emd2, emd3, heads, dimFF, dimH, drop, maxlen):
         if args['data'] == 'mustard':
             fused_passed = Input(shape=(maxlen, 81))
             weights = Input(shape=(maxlen, 81))
+        
+        if args['data'] == 'mosi':
+            fused_passed = Input(shape=(maxlen, 5))
+            weights = Input(shape=(maxlen, 5))
   
   
         if args['data'] == 'mustard':
@@ -333,6 +337,13 @@ def createModelC(emd1, emd2, emd3, heads, dimFF, dimH, drop, maxlen):
             attentionText2 = TimeDistributed(Dense(81, activation="softmax"))(newtext)
             attentionAudio2 = TimeDistributed(Dense(81, activation="softmax"))(audio)
             attentionVideo2 = TimeDistributed(Dense(81, activation="softmax"))(newvideo)
+        
+        if args['data'] == 'mosi':
+            newtext = TimeDistributed(Dense(5))(text)
+            newvideo = TimeDistributed(Dense(5))(video)
+            attentionText2 = TimeDistributed(Dense(5, activation="softmax"))(newtext)
+            attentionAudio2 = TimeDistributed(Dense(5, activation="softmax"))(audio)
+            attentionVideo2 = TimeDistributed(Dense(5, activation="softmax"))(newvideo)
 
         
         attentionSum = attentionText2 + attentionAudio2 + attentionVideo2
@@ -365,6 +376,8 @@ def createModelC(emd1, emd2, emd3, heads, dimFF, dimH, drop, maxlen):
 if args['data'] == 'mustard':
     PROCESSED_DATA_BASE = '/home/shivama2/ssmix/multimodal-mixup-staging/m3a/mustard/'
     # PROCESSED_DATA_BASE = '/home/rajivratn/sriram/Speech-Coherence-Project/Samyak/m3a/multimodal-mixup-staging/m3a/processed_data/'
+if args['data'] == 'mosi':
+    PROCESSED_DATA_BASE = '/home/shivama2/ssmix/multimodal-mixup-staging/m3a/mosi/'
 X_text_Train = np.load(PROCESSED_DATA_BASE + 'x_text_train.npy')
 X_text_Test = np.load(PROCESSED_DATA_BASE + 'x_text_test.npy')
 X_audio_Train = np.load(PROCESSED_DATA_BASE + 'x_audio_train.npy', allow_pickle=True).astype(np.float64)
@@ -411,9 +424,24 @@ if args['data'] == 'mustard':
     ZERO_AUDIO_TENSOR_TEST = tf.zeros([138, maxLen, 81])
     ZERO_TEXT_TENSOR_TEST = tf.zeros([138, maxLen, 300])
     ZERO_VIDEO_TENSOR_TEST = tf.zeros([138, maxLen, 371])
+
+if args['data'] == 'mosi':
+    maxLen = 50
+    ZERO_TENSOR = tf.zeros([args['bs'], maxLen, 5])
+    ONES_TENSOR = tf.ones([args['bs'], maxLen, 5])
+    ZERO_TENSOR_TEST = tf.zeros([138, maxLen, 5])
+    ONES_TENSOR_TEST = tf.ones([138, maxLen, 5])
+
+    ZERO_AUDIO_TENSOR = tf.zeros([args['bs'], maxLen, 5])
+    ZERO_TEXT_TENSOR = tf.zeros([args['bs'], maxLen, 300])
+    ZERO_VIDEO_TENSOR = tf.zeros([args['bs'], maxLen, 20])
+
+    ZERO_AUDIO_TENSOR_TEST = tf.zeros([138, maxLen, 5])
+    ZERO_TEXT_TENSOR_TEST = tf.zeros([138, maxLen, 300])
+    ZERO_VIDEO_TENSOR_TEST = tf.zeros([138, maxLen, 20])
     
 
-if args['data'] == 'mustard':
+if args['data'] in ['mustard', 'mosi']:
     YTrain = np.load(PROCESSED_DATA_BASE + 'train_labels.npy')
     YTest = np.load(PROCESSED_DATA_BASE + 'test_labels.npy')
 
@@ -522,6 +550,9 @@ def custom_training(model, train_set, X_text_Test, X_audio_Test, X_video_Test, X
                 if args['data'] == 'mustard':
                     span_len = lam_not * 81
                     lam_inter = lam_not
+                if args['data'] == 'mosi':
+                      span_len = lam_not * 5
+                      lam_inter = lam_not
                 
     
                 audio_mixed_intra = intra_mix(audio.numpy(), audio.numpy()[permutation], saliency_audio, saliency_audio[permutation], args['threshold'], lam)
@@ -623,10 +654,14 @@ def objective(trial):
         num_audio_feats = 81
         num_heads = 3
 
+    if args['data'] == 'mosi':
+        num_audio_feats = 5
+        num_vision_feats = 20
+
     params = {
         # "lr": trial.suggest_loguniform("lr", 1e-5, 1e-2),
         # "threshold": trial.suggest_loguniform("threshold", 0.1, 0.8)
-        # "lam_inter": trial.suggest_loguniform("lam_inter", 0.1, 0.8)
+        "lam_inter": trial.suggest_loguniform("lam_inter", 0.1, 0.8),
         "learning_rate": trial.suggest_loguniform("lr", 6e-4, 2e-3),
         "loss_original_coef": trial.suggest_loguniform("loss_original_coef", 0.1, 1),
         "loss_intra_coef": trial.suggest_loguniform("loss_intra_coef", 0.1, 1),
@@ -647,7 +682,7 @@ def objective(trial):
     model = createModelC(
             300,
             num_audio_feats,
-            371,
+            num_vision_feats
             num_heads,
             movement_feedforward_size,
             movement_hidden_dim,
@@ -663,11 +698,15 @@ if args['tune_coefs'] != 1:
     if args['data'] == 'mustard':
         num_audio_feats = 81
         num_heads = 3
+    
+    if args['data'] == 'mosi':
+        num_audio_feats = 5
+        num_vision_feats = 20
     args['trial_number'] = 'none'
     model = createModelC(
             300,
             num_audio_feats,
-            371,
+            num_vision_feats,
             num_heads,
             movement_feedforward_size,
             movement_hidden_dim,
