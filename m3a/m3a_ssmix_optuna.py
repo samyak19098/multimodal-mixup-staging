@@ -118,6 +118,29 @@ def createMdrm(maxlen, audio_shape, text_shape):
 
     return model
 
+def createMdrmSH(maxlen, audio_shape, text_shape):
+    audio = Input(shape=(maxlen, audio_shape))
+    text = Input(shape=(maxlen, text_shape))
+    fused_passed = Input(shape=(maxlen, 64))
+    weights = Input(shape=(maxlen, 64))
+
+    lstm_audio = createMdrmLstm(maxlen, audio_shape, 32, 'tanh')
+    lstm_text = createMdrmLstm(maxlen, text_shape, 32, 'tanh')
+    concatenator = Concatenate(axis=2)
+    lstm_combined = createMdrmLstm(maxlen, 64, 1, 'sigmoid', flatten=True)
+
+    audio_features = lstm_audio(audio)
+    text_features = lstm_text(text)
+    
+    combined_features = concatenator([audio_features, text_features])
+    combined_features = combined_features * weights + fused_passed
+
+    logits = lstm_combined(combined_features)
+
+    model = keras.Model(inputs=[audio, text, fused_passed, weights], outputs=[logits, combined_features])
+
+    return model
+
 def createMlp(maxlen, audio_shape, text_shape):
     audio = Input(shape=(maxlen, audio_shape))
     text = Input(shape=(maxlen, text_shape))
@@ -412,10 +435,17 @@ print("TEST : ", X_text_Test.shape, X_audio_Test.shape, X_pos_Test.shape, X_spea
 if args['data'] == 'm3a':
     maxLen = 284
     maxSpeaker = 30
-    ZERO_TENSOR = tf.zeros([args['bs'], maxLen, 62])
-    ONES_TENSOR = tf.ones([args['bs'], maxLen, 62])
-    ZERO_TENSOR_TEST = tf.zeros([119, maxLen, 62])
-    ONES_TENSOR_TEST = tf.ones([119, maxLen, 62])
+
+    if args['model_name'] == 'mdrm_sh':
+        ZERO_TENSOR = tf.zeros([args['bs'], maxLen, 64])
+        ONES_TENSOR = tf.ones([args['bs'], maxLen, 64])
+        ZERO_TENSOR_TEST = tf.zeros([119, maxLen, 64])
+        ONES_TENSOR_TEST = tf.ones([119, maxLen, 64])
+    else:
+        ZERO_TENSOR = tf.zeros([args['bs'], maxLen, 62])
+        ONES_TENSOR = tf.ones([args['bs'], maxLen, 62])
+        ZERO_TENSOR_TEST = tf.zeros([119, maxLen, 62])
+        ONES_TENSOR_TEST = tf.ones([119, maxLen, 62])
 
     ZERO_AUDIO_TENSOR = tf.zeros([args['bs'], maxLen, 62])
     ZERO_TEXT_TENSOR = tf.zeros([args['bs'], maxLen, 768])
@@ -426,11 +456,16 @@ elif args['data'] == 'ec':
     maxLen = 495
     maxSpeaker = 30
 
-    ZERO_TENSOR = tf.zeros([args['bs'], maxLen, 29])
-    ONES_TENSOR = tf.ones([args['bs'], maxLen, 29])
-
-    ZERO_TENSOR_TEST = tf.zeros([258, maxLen, 29])
-    ONES_TENSOR_TEST = tf.ones([258, maxLen, 29])
+    if args['model_name'] == 'mdrm_sh':
+        ZERO_TENSOR = tf.zeros([args['bs'], maxLen, 64])
+        ONES_TENSOR = tf.ones([args['bs'], maxLen, 64])
+        ZERO_TENSOR_TEST = tf.zeros([258, maxLen, 64])
+        ONES_TENSOR_TEST = tf.ones([258, maxLen, 64])
+    else:
+        ZERO_TENSOR = tf.zeros([args['bs'], maxLen, 62])
+        ONES_TENSOR = tf.ones([args['bs'], maxLen, 62])
+        ZERO_TENSOR_TEST = tf.zeros([119, maxLen, 62])
+        ONES_TENSOR_TEST = tf.ones([119, maxLen, 62])
 
     ZERO_AUDIO_TENSOR = tf.zeros([args['bs'], maxLen, 29])
     ZERO_TEXT_TENSOR = tf.zeros([args['bs'], maxLen, 768])
@@ -812,6 +847,147 @@ def custom_training_mdrm(model, train_set, X_text_Test, X_audio_Test, X_pos_Test
     wandb.finish()
     return best_report['weighted avg']['f1-score']
 
+def custom_training_sh(model, train_set, X_text_Test, X_audio_Test, X_pos_Test, X_speak_Test, YTest):
+    
+    wandb.init(
+        project='ssmix',
+        name=str(timestamp) + '_' + args['run_name'] + '_' + str(args['trial_number']),
+        config=args
+    )
+    
+    loss_fn = tf.keras.losses.BinaryCrossentropy(
+            from_logits=False,
+            name="binary_crossentropy",
+    )
+    optimizer = tf.keras.optimizers.Adam(learning_rate=learning_rate)
+    epochs = args['num_epochs']
+    best_report = None
+    best_mcc = None
+    
+    for epoch in range(epochs):
+        running_loss, running_loss_1, running_loss_2_intra, running_loss_2_inter = 0, 0, 0, 0
+        total = 0
+        for idx, (text, audio, pos, speak, label) in enumerate(train_set):
+            with tf.GradientTape() as super_tape:
+                with tf.GradientTape(persistent=True) as tape:
+                    tape.watch(audio)
+                    tape.watch(text)
+                    logits, fused = model(inputs=[audio, text, ZERO_TENSOR, ONES_TENSOR], training=True)
+                    loss_value_1 = loss_fn(label, logits)
+
+                grads_audio = tape.gradient(loss_value_1, audio)
+                grads_text = tape.gradient(loss_value_1, text)
+                grads_fused = tape.gradient(loss_value_1, fused)
+
+                saliency_audio = np.abs(grads_audio.numpy())
+                saliency_text = np.abs(grads_text.numpy())
+                saliency_fused = np.abs(grads_fused.numpy())
+                
+                permutation = np.random.permutation(audio.shape[0])
+
+                
+                lam = np.random.beta(0.5, 0.5)
+    
+                # temp1 = np.sum(audio, axis=2)
+                # temp2 = np.count_nonzero(temp1, axis=1)
+                # print(audio.shape)
+                # print(temp1.shape)
+                # print(temp2.shape)
+                # sys.exit(0)
+                # lam_not = np.random.beta(0.5, 0.5)
+                lam_not = args['lam_inter']
+                if args['data'] == 'm3a':
+                    span_len = lam_not * 64
+                    # lam_inter = 1 - (lam_not * (284 / (temp2 + 1))) #adding 1 for smoothening
+                    lam_inter = lam_not
+                elif args['data'] == 'ec':
+                    span_len = lam_not * 64
+                    lam_inter = lam_not
+                    # lam_inter = 1 - (lam_not * (495 / (temp2 + 1))) #adding 1 for smoothening
+                
+    
+                audio_mixed_intra = intra_mix(audio.numpy(), audio.numpy()[permutation], saliency_audio, saliency_audio[permutation], args['threshold'], lam)
+                text_mixed_intra = intra_mix(text.numpy(), text.numpy()[permutation], saliency_text, saliency_text[permutation], args['threshold'], lam)
+                audio_mixed_intra = tf.convert_to_tensor(audio_mixed_intra)
+                text_mixed_intra = tf.convert_to_tensor(text_mixed_intra)
+    
+                
+                fused_mixed_inter = inter_mix(fused.numpy(), fused.numpy()[permutation], saliency_fused, saliency_fused[permutation], span_len)
+                fused_mixed_inter = tf.convert_to_tensor(fused_mixed_inter)
+    
+                label = tf.cast(label, tf.float32)
+                label_mixed_intra = tf.math.scalar_mul(lam, label) + tf.math.scalar_mul(1 - lam, tf.gather(label, tf.convert_to_tensor(permutation)))
+                speak = tf.cast(speak, tf.float32)
+                speak_mixed_intra = tf.math.scalar_mul(lam, speak) + tf.math.scalar_mul(1 - lam, tf.gather(speak, tf.convert_to_tensor(permutation)))
+
+                label_mixed_inter = tf.multiply(tf.constant(lam_inter, dtype=tf.float32), label) + tf.multiply(tf.constant(1 - lam_inter, dtype=tf.float32), tf.gather(label, tf.convert_to_tensor(permutation)))
+                speak_mixed_inter = tf.math.scalar_mul(lam_inter, speak) + tf.math.scalar_mul(1 - lam_inter, tf.gather(speak, tf.convert_to_tensor(permutation)))
+
+                super_tape.watch(audio_mixed_intra)
+                super_tape.watch(text_mixed_intra)
+                super_tape.watch(label_mixed_intra)
+                super_tape.watch(speak_mixed_intra)
+                super_tape.watch(label_mixed_inter)
+                super_tape.watch(speak_mixed_inter)
+                super_tape.watch(fused_mixed_inter)			
+
+                
+                logits_intra, _ = model(inputs=[audio_mixed_intra, text_mixed_intra, ZERO_TENSOR, ONES_TENSOR], training=True)
+                loss_value_2_intra = loss_fn(label_mixed_intra, logits_intra)
+                logits_inter, _ = model(inputs=[audio_mixed_intra, text_mixed_intra, fused_mixed_inter, ZERO_TENSOR], training=True)
+                loss_value_2_inter = loss_fn(label_mixed_inter, logits_inter)
+    
+                loss_value = args['loss_original_coef'] * loss_value_1 + args['loss_intra_coef'] * loss_value_2_intra + args['loss_inter_coef'] * loss_value_2_inter
+
+
+                running_loss_1 += loss_value_1 * audio.shape[0]
+                running_loss_2_intra += loss_value_2_intra * audio.shape[0]
+                running_loss_2_inter += loss_value_2_inter * audio.shape[0]
+                running_loss += loss_value * audio.shape[0]
+                total += audio.shape[0]
+            
+            grads = super_tape.gradient(loss_value, model.trainable_weights)
+            optimizer.apply_gradients(zip(grads, model.trainable_weights))
+
+            print(f"Epoch {epoch}: (iter {idx}) train_loss={float(loss_value)}")
+        
+        running_loss_1 /= total
+        running_loss_2_intra /= total
+        running_loss_2_inter /= total
+        running_loss /= total
+
+        print(f"Shapes = {X_text_Test.shape}, {X_audio_Test.shape}, {ZERO_TENSOR_TEST.shape}")
+
+        predTest = model.predict(
+                [X_audio_Test, X_text_Test, ZERO_TENSOR_TEST, ONES_TENSOR_TEST]
+        )[0].round()
+        mcc = matthews_corrcoef(YTest, predTest)
+        f1 = f1_score(YTest, predTest)
+        print("--> F1 for Testing Set for ", YPrint[i], ": ", f1)
+        print("--> MCC for Testing Set for ", YPrint[i], ": ", mcc)
+        report = classification_report(YTest, predTest, output_dict=True)
+        if best_report is None:
+            best_report = report
+        elif best_report['weighted avg']['f1-score'] < report['weighted avg']['f1-score']:
+            best_report = report
+            best_mcc = mcc
+        print(f"Weighted f1 score = {best_report['weighted avg']['f1-score']}")
+        print()
+
+        wandb.log({
+            'Original loss': running_loss_1,
+            'Intra loss': running_loss_2_intra,
+            'Inter loss': running_loss_2_inter,
+            'Total loss': running_loss,
+            'F1-score': report['weighted avg']['f1-score'],
+            'MCC': mcc
+        })
+    wandb.log({
+        'Best F1-score': best_report['weighted avg']['f1-score'],
+        'Best MCC': best_mcc
+    })
+    wandb.finish()
+    return best_report['weighted avg']['f1-score']
 
 
 def objective(trial):
@@ -879,6 +1055,19 @@ def objective(trial):
         args['lr'] = params['learning_rate']
         model = createMdrm(maxLen, num_audio_feats, 768)
         best_f1 = custom_training_mdrm(model, train_set, X_text_Test, X_audio_Test, X_pos_Test, X_speak_Test, YTest)
+    
+    elif args['model_name'] == 'mdrm_sh':
+        params = {
+            # "lr": trial.suggest_loguniform("lr", 1e-5, 1e-2),
+            # "threshold": trial.suggest_loguniform("threshold", 0.1, 0.8)
+            # "lam_inter": trial.suggest_loguniform("lam_inter", 0.1, 0.8)
+            "learning_rate": trial.suggest_loguniform("lr", 6e-4, 2e-3),
+        }
+        learning_rate = params['learning_rate']
+        args['trial_number'] = trial.number
+        args['lr'] = params['learning_rate']
+        model = createMdrmSH(maxLen, num_audio_feats, 768)
+        best_f1 = custom_training_sh(model, train_set, X_text_Test, X_audio_Test, X_pos_Test, X_speak_Test, YTest)
     
     elif args['model_name'] == 'mlp':
         params = {
