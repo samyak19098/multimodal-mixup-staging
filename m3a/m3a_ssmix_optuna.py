@@ -729,9 +729,11 @@ def custom_training(model, train_set, X_text_Test, X_audio_Test, X_pos_Test, X_s
         report = classification_report(YTest, predTest, output_dict=True)
         if best_report is None:
             best_report = report
+            model.save_weights(f'./saved_models/m3anet_{best_report["weighted avg"]["f1-score"]}.ckpt')
         elif best_report['weighted avg']['f1-score'] < report['weighted avg']['f1-score']:
             best_report = report
             best_mcc = mcc
+            model.save_weights(f'./saved_models/m3anet_{best_report["weighted avg"]["f1-score"]}.ckpt')
         print(f"Weighted f1 score = {best_report['weighted avg']['f1-score']}")
         print()
 
@@ -1023,13 +1025,13 @@ def objective(trial):
                 "threshold": trial.suggest_loguniform("threshold", 0.5, 0.8)
             }
 
-            learning_rate = params['learning_rate']
+            # learning_rate = params['learning_rate']
             # args['loss_original_coef'] = params['loss_original_coef']
             # args['loss_intra_coef'] = params['loss_intra_coef']
             # args['loss_inter_coef'] = params['loss_inter_coef']
-            args['lr'] = params['learning_rate']
-            args['lam_inter'] = params['lam_inter']
-            args['threshold'] = params['threshold'] 
+            # args['lr'] = params['learning_rate']
+            # args['lam_inter'] = params['lam_inter']
+            # args['threshold'] = params['threshold'] 
                
         args['trial_number'] = trial.number
         model = createModelC(
