@@ -88,7 +88,8 @@ movement_dropout = 0.0
 
 def createMdrmLstm(maxlen, input_shape, output_shape, last_layer_activation, flatten=False):
     input_data = Input(shape=(maxlen, input_shape))
-    masked = Masking(mask_value=0)(input_data)
+    # masked = Masking(mask_value=0)(input_data)
+    masked = input_data
     lstm = Bidirectional(LSTM(300, activation='tanh', return_sequences = True, dropout=0.6))(masked)
     inter = Dropout(0.9)(lstm)
     if flatten:
@@ -1058,10 +1059,15 @@ def objective(trial):
     
     elif args['model_name'] == 'mdrm_sh':
         params = {
-            # "lr": trial.suggest_loguniform("lr", 1e-5, 1e-2),
-            # "threshold": trial.suggest_loguniform("threshold", 0.1, 0.8)
-            # "lam_inter": trial.suggest_loguniform("lam_inter", 0.1, 0.8)
+            "lr": trial.suggest_loguniform("lr", 1e-5, 1e-2),
+            "threshold": trial.suggest_loguniform("threshold", 0.1, 0.8),
+            "lam_inter": trial.suggest_loguniform("lam_inter", 0.1, 0.8),
             "learning_rate": trial.suggest_loguniform("lr", 6e-4, 2e-3),
+            "loss_original_coef": trial.suggest_loguniform("loss_original_coef", 0.1, 1),
+            "loss_intra_coef": trial.suggest_loguniform("loss_intra_coef", 0.1, 1),
+            "loss_inter_coef": trial.suggest_loguniform("loss_inter_coef", 0.1, 1),
+            "lam_inter": trial.suggest_loguniform("lam_inter", 0.2, 0.6),
+            "threshold": trial.suggest_loguniform("threshold", 0.5, 0.8)
         }
         learning_rate = params['learning_rate']
         args['trial_number'] = trial.number
