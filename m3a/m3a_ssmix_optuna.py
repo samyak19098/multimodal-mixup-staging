@@ -1065,13 +1065,16 @@ def objective(trial):
             "learning_rate": trial.suggest_loguniform("lr", 6e-4, 2e-3),
             "loss_original_coef": trial.suggest_loguniform("loss_original_coef", 0.1, 1),
             "loss_intra_coef": trial.suggest_loguniform("loss_intra_coef", 0.1, 1),
-            "loss_inter_coef": trial.suggest_loguniform("loss_inter_coef", 0.1, 1),
-            "lam_inter": trial.suggest_loguniform("lam_inter", 0.2, 0.6),
-            "threshold": trial.suggest_loguniform("threshold", 0.5, 0.8)
+            "loss_inter_coef": trial.suggest_loguniform("loss_inter_coef", 0.1, 1)
         }
         learning_rate = params['learning_rate']
         args['trial_number'] = trial.number
         args['lr'] = params['learning_rate']
+        args['threshold'] = params['threshold']
+        args['lam_inter'] = params['lam_inter']
+        args['loss_original_coef'] = params['loss_original_coef']
+        args['loss_inter_coef'] = params['loss_inter_coef']
+        args['loss_intra_coef'] = params['loss_intra_coef']
         model = createMdrmSH(maxLen, num_audio_feats, 768)
         best_f1 = custom_training_sh(model, train_set, X_text_Test, X_audio_Test, X_pos_Test, X_speak_Test, YTest)
     
