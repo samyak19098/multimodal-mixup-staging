@@ -1071,13 +1071,34 @@ if args['adv_attack'] == 'fgsm':
         )
 
     model.load_weights('./saved_models/m3anet_0.6557544757033248.ckpt')
-    predTest = model.predict([
-         X_text_Test, X_audio_Test, X_pos_Test, X_speak_Test, ZERO_TENSOR_TEST, ONES_TENSOR_TEST
-    ])[0].round()
-    mcc = matthews_corrcoef(YTest, predTest)
-    report = classification_report(YTest, predTest, output_dict=True)
-    print(f'F1-score = {report["weighted avg"]["f1-score"]}')
-    print(f'MCC = {mcc}')
+
+    loss_fn = tf.keras.losses.BinaryCrossentropy(
+            from_logits=False,
+            name="binary_crossentropy",
+    )
+    with tf.GradientTape() as tape:
+        tape.watch(X_text_Test)
+        tape.watch(X_audio_Test)
+        logits, _ = model(
+            inputs=[X_text_Test, X_audio_Test, X_pos_Test, X_speak_Test, ZERO_TENSOR_TEST, ONES_TENSOR_TEST],
+            training=True
+        )
+        loss = loss_fn(YTest, logits)
+    
+    signed_grad_text = tf.sign(tape.gradient(loss, X_text_Test))
+    signed_grad_audio = tf.sign(tape.gradient(loss, X_audio_Test))
+
+    epsilons = [0, 0.01, 0.1, 0.15]
+    for eps in epsilons:
+        adv_text = tf.clip_by_value(X_text_Test + eps * signed_grad_text, -1, 1)
+        adv_audio = tf.clip_by_value(X_audio_Test + eps * signed_grad_audio, -1, 1)
+        predTest = model.predict([
+        adv_text, adv_audio, X_pos_Test, X_speak_Test, ZERO_TENSOR_TEST, ONES_TENSOR_TEST
+        ])[0].round()
+        mcc = matthews_corrcoef(YTest, predTest)
+        report = classification_report(YTest, predTest, output_dict=True)
+        print(f'F1-score = {report["weighted avg"]["f1-score"]}')
+        print(f'MCC = {mcc}')
 
     import sys
     sys.exit()
