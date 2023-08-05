@@ -1093,7 +1093,7 @@ if args['adv_attack'] == 'fgsm':
     signed_grad_text = tf.sign(tape.gradient(loss, X_text_Test))
     signed_grad_audio = tf.sign(tape.gradient(loss, X_audio_Test))
 
-    epsilons = [0, 0.01, 0.1, 0.15]
+    epsilons = [0, 0.001, 0.01, 0.1]
     for eps in epsilons:
         adv_text = X_text_Test + eps * signed_grad_text
         adv_audio = X_audio_Test + eps * signed_grad_audio
