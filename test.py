@@ -14,14 +14,15 @@ def smooth(y, box_pts):
     return y_smooth
 
 # %%
-df_full_model = pd.read_csv('plots/f1_mustard_full_model.csv')
-df_vanilla_mixup = pd.read_csv('plots/f1_mustard_vanilla_mixup.csv')
-df_no_mixup = pd.read_csv('plots/f1_mustard_no_mixup.csv')
+ds = 'm3a'
+df_full_model = pd.read_csv(f'plots/f1_{ds}_full_model.csv')
+df_vanilla_mixup = pd.read_csv(f'plots/f1_{ds}_vanilla_mixup.csv')
+# df_no_mixup = pd.read_csv('plots/f1_ec_no_mixup.csv')
 
-plt.plot(smooth(df_full_model['f1'], 10)[:90])
-plt.plot(smooth(df_vanilla_mixup['f1'], 10)[:90])
-plt.plot(smooth(df_no_mixup['f1'], 10)[:90])
-plt.legend(['Full model', 'Vanilla mixup', 'No mixup'])
-plt.savefig('test.png')
+plt.plot(smooth(df_full_model['f1'], 10)[:60])
+plt.plot(smooth(df_vanilla_mixup['f1'], 10)[:60])
+# plt.plot(smooth(df_no_mixup['f1'], 10)[:130])
+plt.legend(['Full model', 'Vanilla mixup'])
+plt.savefig(f'{ds}_plot.png')
 
 

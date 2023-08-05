@@ -672,11 +672,11 @@ def custom_training(model, train_set, X_text_Test, X_audio_Test, X_pos_Test, X_s
         report = classification_report(YTest, predTest, output_dict=True)
         if best_report is None:
             best_report = report
-            model.save_weights(f'./saved_models/m3anet_{best_report["weighted avg"]["f1-score"]}.ckpt')
+            model.save_weights(f'./saved_models/{args["model_name"]}_{args["run_name"]}_{best_report["weighted avg"]["f1-score"]}')
         elif best_report['weighted avg']['f1-score'] < report['weighted avg']['f1-score']:
             best_report = report
             best_mcc = mcc
-            model.save_weights(f'./saved_models/m3anet_{best_report["weighted avg"]["f1-score"]}.ckpt')
+            model.save_weights(f'./saved_models/{args["model_name"]}_{args["run_name"]}_{best_report["weighted avg"]["f1-score"]}')
         print(f"Weighted f1 score = {best_report['weighted avg']['f1-score']}")
         print()
 
@@ -834,13 +834,6 @@ def custom_training_sh(model, train_set, X_text_Test, X_audio_Test, X_pos_Test, 
                 
                 lam = np.random.beta(0.5, 0.5)
     
-                # temp1 = np.sum(audio, axis=2)
-                # temp2 = np.count_nonzero(temp1, axis=1)
-                # print(audio.shape)
-                # print(temp1.shape)
-                # print(temp2.shape)
-                # sys.exit(0)
-                # lam_not = np.random.beta(0.5, 0.5)
                 lam_not = args['lam_inter']
                 if args['data'] == 'm3a':
                     span_len = lam_not * 64
