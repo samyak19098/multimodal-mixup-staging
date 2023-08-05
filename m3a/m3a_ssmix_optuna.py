@@ -60,6 +60,7 @@ ap.add_argument('--model_name', type=str, default='m3a')
 ap.add_argument('--num_trials', type=int, default=20)
 ap.add_argument('--grid_search', type=int, default=0)
 ap.add_argument('--region_name', type=str, default="none")
+ap.add_argument('--adv_attack', type=str, default='none')
 
 args = vars(ap.parse_args())
 
@@ -474,37 +475,6 @@ elif args['data'] == 'ec':
     ZERO_AUDIO_TENSOR_TEST = tf.zeros([258, maxLen, 29])
     ZERO_TEXT_TENSOR_TEST = tf.zeros([258, maxLen, 768])
     
-
-# YVals = pd.read_csv("Y_Volatility.csv")
-# YT3 = YVals["vFuture3"]
-# YT7 = YVals["vFuture7"]
-# YT15 = YVals["vFuture15"]
-
-# Ys = [YT3, YT7, YT15]
-# YPrint = ["Tau 3", "Tau 7", "Tau 15"]
-# print("------------------------------ Starting training -----------------------------------")
-# for i in range(3):
-#   print(f"At i = {i}")
-#   YTrain = Ys[i][trainIndex]
-#   YTest = Ys[i][testIndex]
-
-#   modelN = "ModelV "+YPrint[i]+".h5"
-
-#   mc = tf.keras.callbacks.ModelCheckpoint(modelN, monitor='val_loss', verbose=0, save_best_only=True)
-#   model = createModelV(768, 62, 3, volatility_feedforward_size, volatility_hidden_dim, volatility_dropout, maxLen,maxSpeaker)
-#   model.compile(loss='mean_squared_error', optimizer=Adam(lr = learning_rate))
-#   out = model.fit([X_text_Train,X_audio_Train,X_pos_Train,X_speak_Train], YTrain, batch_size=batch_size, epochs=500, validation_data=([X_text_Test,X_audio_Test,X_pos_Test,X_speak_Test],YTest), verbose=1, callbacks=[mc])
-#   depen = {'MultiHeadSelfAttention': MultiHeadSelfAttention,'TransformerBlock': TransformerBlock}
-#   model = load_model(modelN, custom_objects=depen)
-
-#   predTest = model.predict([X_text_Train,X_audio_Train,X_pos_Train,X_speak_Train])
-#   r = mean_squared_error(YTrain,predTest)
-#   print('MSE for Training Set for ',YPrint[i],': ',r)
-
-#   predTest = model.predict([X_text_Test,X_audio_Test,X_pos_Test,X_speak_Test])
-#   r = mean_squared_error(YTest,predTest)
-#   print('MSE for Testing Set for ',YPrint[i],': ',r)
-#   print()
 if args['data'] == 'm3a':
     YVals = pd.read_csv("Y_Movement.csv")
 else:
@@ -555,13 +525,6 @@ def inter_mix(x1, x2, sal1, sal2, span_ratio):
     min_sum2 = [utterance_sal2[i][:span_length].sum() for i in range(x1.shape[0])]
     cur_sum2 = [utterance_sal2[i][:span_length].sum() for i in range(x1.shape[0])]
     
-    # print(most_salient1, max_sum1, cur_sum1)
-    # print("\n\n-------------\n\n")
-    
-    # print(f"Cumulative saliency shape: s1 = {utterance_sal1.shape}, s2 = {utterance_sal2.shape}")
-    # # inp = input()
-    # print(x1)
-    # print(x2)
     
     for i in range(x1.shape[0]):
         for j in range(1, x1.shape[1] - span_length):
@@ -583,15 +546,11 @@ def inter_mix(x1, x2, sal1, sal2, span_ratio):
             cur_sum1[i] = new_sum1
             cur_sum2[i] = new_sum2
     
-    # print(most_salient1)
-    # print(least_salient2)
     
     mixed = x2.copy()
     for i in range(x1.shape[0]):
         mixed[i][least_salient2[i][0]:least_salient2[i][1] + 1, :] = x1[i][most_salient1[i][0]:most_salient1[i][1] + 1, :]
     
-    # print("\n\n -----X---------------X---------------------X-------------X----------")
-    # print(mixed)
     
     return mixed
 
@@ -638,34 +597,19 @@ def custom_training(model, train_set, X_text_Test, X_audio_Test, X_pos_Test, X_s
 
                 
                 lam = np.random.beta(0.5, 0.5)
-    
-                # temp1 = np.sum(audio, axis=2)
-                # temp2 = np.count_nonzero(temp1, axis=1)
-                # print(audio.shape)
-                # print(temp1.shape)
-                # print(temp2.shape)
-                # sys.exit(0)
-                # lam_not = np.random.beta(0.5, 0.5)
                 lam_not = args['lam_inter']
                 if args['data'] == 'm3a':
                     span_len = lam_not * 62
-                    # lam_inter = 1 - (lam_not * (284 / (temp2 + 1))) #adding 1 for smoothening
                     lam_inter = lam_not
                 elif args['data'] == 'ec':
                     span_len = lam_not * 29
                     lam_inter = lam_not
-                    # lam_inter = 1 - (lam_not * (495 / (temp2 + 1))) #adding 1 for smoothening
                 
     
                 audio_mixed_intra = intra_mix(audio.numpy(), audio.numpy()[permutation], saliency_audio, saliency_audio[permutation], args['threshold'], lam)
                 text_mixed_intra = intra_mix(text.numpy(), text.numpy()[permutation], saliency_text, saliency_text[permutation], args['threshold'], lam)
                 audio_mixed_intra = tf.convert_to_tensor(audio_mixed_intra)
                 text_mixed_intra = tf.convert_to_tensor(text_mixed_intra)
-    
-                # audio_mixed_inter = inter_mix(audio.numpy(), audio.numpy()[permutation], saliency_audio, saliency_audio[permutation], span_len)
-                # text_mixed_inter = inter_mix(text.numpy(), text.numpy()[permutation], saliency_text, saliency_text[permutation], span_len)
-                # audio_mixed_inter = tf.convert_to_tensor(audio_mixed_inter)
-                # text_mixed_inter = tf.convert_to_tensor(text_mixed_inter)
                 
                 fused_mixed_inter = inter_mix(fused.numpy(), fused.numpy()[permutation], saliency_fused, saliency_fused[permutation], span_len)
                 fused_mixed_inter = tf.convert_to_tensor(fused_mixed_inter)
@@ -677,10 +621,9 @@ def custom_training(model, train_set, X_text_Test, X_audio_Test, X_pos_Test, X_s
 
                 label_mixed_inter = tf.multiply(tf.constant(lam_inter, dtype=tf.float32), label) + tf.multiply(tf.constant(1 - lam_inter, dtype=tf.float32), tf.gather(label, tf.convert_to_tensor(permutation)))
                 speak_mixed_inter = tf.math.scalar_mul(lam_inter, speak) + tf.math.scalar_mul(1 - lam_inter, tf.gather(speak, tf.convert_to_tensor(permutation)))
+
                 super_tape.watch(audio_mixed_intra)
                 super_tape.watch(text_mixed_intra)
-                # super_tape.watch(audio_mixed_inter)
-                # super_tape.watch(text_mixed_inter)
                 super_tape.watch(label_mixed_intra)
                 super_tape.watch(speak_mixed_intra)
                 super_tape.watch(label_mixed_inter)
@@ -1109,7 +1052,40 @@ def objective(trial):
     return best_f1
 
 
-if args['grid_search'] == 1:
+if args['adv_attack'] == 'fgsm':
+    if args['data'] == 'm3a':
+        num_audio_feats = 62
+        num_heads = 3
+    elif args['data'] == 'ec':
+        num_audio_feats = 29
+        num_heads = 4
+    model = createModelC(
+                768,
+                num_audio_feats,
+                num_heads,
+                movement_feedforward_size,
+                movement_hidden_dim,
+                movement_dropout,
+                maxLen,
+                maxSpeaker,
+        )
+
+    model.load_weights('./saved_models/m3anet_0.6557544757033248.ckpt')
+    predTest = model.predict([
+         X_text_Test, X_audio_Test, X_pos_Test, X_speak_Test, ZERO_TENSOR_TEST, ONES_TENSOR_TEST
+    ])
+    mcc = matthews_corrcoef(YTest, predTest)
+    report = classification_report(YTest, predTest, output_dict=True)
+    print(f'F1-score = {report["weighted avg"]["f1-score"]}')
+    print(f'MCC = {mcc}')
+
+    import sys
+    sys.exit()
+    
+    
+
+
+elif args['grid_search'] == 1:
     print("\n\n ------------------ Performing Grid Search on lam_inter and threshold ------------------\n\n")
     if args['region_name'] == 'A':
         search_space = {
@@ -1136,30 +1112,5 @@ if args['grid_search'] == 1:
 else:
     study = optuna.create_study(direction='maximize')
     study.optimize(func=objective, n_trials=args['num_trials'])
-# print(study.best_value)
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-# custom_training(model, train_set, X_text_Test, X_audio_Test, X_pos_Test, X_speak_Test, YTest)
-
-# model.compile(loss='binary_crossentropy', optimizer=Adam(lr = learning_rate), metrics=['accuracy'])
-
-# out = model.fit([X_text_Train,X_audio_Train,X_pos_Train,X_speak_Train], YTrain, batch_size=batch_size, epochs=200, validation_data=([X_text_Test,X_audio_Test,X_pos_Test,X_speak_Test],YTest), verbose=1, callbacks=[mc])
-# depen = {
-# 		"MultiHeadSelfAttention": MultiHeadSelfAttention,
-# 		"TransformerBlock": TransformerBlock,
-# }
-# model = load_model(modelN, custom_objects=depen)
 
 
