@@ -1076,6 +1076,10 @@ if args['adv_attack'] == 'fgsm':
             from_logits=False,
             name="binary_crossentropy",
     )
+    X_text_Test = tf.convert_to_tensor(X_text_Test)
+    X_audio_Test = tf.convert_to_tensor(X_audio_Test)
+    X_pos_Test = tf.convert_to_tensor(X_pos_Test)
+    X_speak_Test = tf.convert_to_tensor(X_speak_Test)
     with tf.GradientTape() as tape:
         tape.watch(X_text_Test)
         tape.watch(X_audio_Test)
