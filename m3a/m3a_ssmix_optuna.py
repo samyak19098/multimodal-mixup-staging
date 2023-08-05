@@ -1073,7 +1073,7 @@ if args['adv_attack'] == 'fgsm':
     model.load_weights('./saved_models/m3anet_0.6557544757033248.ckpt')
     predTest = model.predict([
          X_text_Test, X_audio_Test, X_pos_Test, X_speak_Test, ZERO_TENSOR_TEST, ONES_TENSOR_TEST
-    ])
+    ])[0].round()
     mcc = matthews_corrcoef(YTest, predTest)
     report = classification_report(YTest, predTest, output_dict=True)
     print(f'F1-score = {report["weighted avg"]["f1-score"]}')
