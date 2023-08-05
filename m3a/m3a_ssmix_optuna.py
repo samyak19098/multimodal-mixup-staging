@@ -1081,7 +1081,7 @@ if args['adv_attack'] == 'fgsm':
     X_pos_Test = tf.convert_to_tensor(X_pos_Test)
     X_speak_Test = tf.convert_to_tensor(X_speak_Test)
     YTest = YTest.to_numpy().reshape((YTest.shape[0], 1))
-    with tf.GradientTape() as tape:
+    with tf.GradientTape(persistent=True) as tape:
         tape.watch(X_text_Test)
         tape.watch(X_audio_Test)
         logits, _ = model(
