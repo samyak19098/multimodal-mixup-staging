@@ -1097,8 +1097,8 @@ if args['adv_attack'] == 'fgsm':
     for eps in epsilons:
         adv_text = X_text_Test + eps * signed_grad_text
         adv_audio = X_audio_Test + eps * signed_grad_audio
-        print(X_text_Test.mean())
-        print(X_audio_Test.mean())
+        print(tf.reduce_mean(X_text_Test))
+        print(tf.reduce_mean(X_audio_Test))
         predTest = model.predict([
         adv_text, adv_audio, X_pos_Test, X_speak_Test, ZERO_TENSOR_TEST, ONES_TENSOR_TEST
         ])[0].round()
