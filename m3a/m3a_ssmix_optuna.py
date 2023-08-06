@@ -61,6 +61,7 @@ ap.add_argument('--num_trials', type=int, default=20)
 ap.add_argument('--grid_search', type=int, default=0)
 ap.add_argument('--region_name', type=str, default="none")
 ap.add_argument('--adv_attack', type=str, default='none')
+ap.add_argument('--saved_model_name', type=str, default='m3a_nomix_1_0.5885261500234761')
 
 args = vars(ap.parse_args())
 
@@ -1063,7 +1064,7 @@ if args['adv_attack'] == 'fgsm':
                 maxSpeaker,
         )
 
-    model.load_weights('./saved_models/m3anet_0.6557544757033248.ckpt')
+    model.load_weights(f'./saved_models/{args["saved_model_name"]}')
 
     loss_fn = tf.keras.losses.BinaryCrossentropy(
             from_logits=False,
